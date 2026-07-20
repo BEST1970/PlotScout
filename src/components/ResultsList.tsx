@@ -177,14 +177,14 @@ export default function ResultsList() {
     saveToLocalStorage(parcelId, { notes });
   };
 
-  const exportCsv = () => {
+  const generateCSVFromState = () => {
     const exportData = data.map(row => ({
       'Parcel ID': row.parcel_id,
       'Address': row.address || "",
       'Zone': formatZone(row.Zone),
       'Plot Area (sqm)': row.plot_area,
       'Max GFA (sqm)': row.allowed_gfa,
-      'Max Footprint (%)': row.plot_area ? ((row.existing_gfa || 0) / row.plot_area * 100).toFixed(1) + '%' : '0%',
+      'Existing Coverage (%)': row.plot_area ? ((row.existing_gfa || 0) / row.plot_area * 100).toFixed(1) + '%' : '0%',
       'Gap (sqm)': row.gap,
       'Status': row.feedback || "Pending",
       'Notes': row.notes || "",
@@ -220,7 +220,7 @@ export default function ResultsList() {
           <p className="text-sm text-slate-500 mt-1">Current Demo Dataset: Białołęka District | Filtered for significant untapped potential.</p>
         </div>
         <button
-          onClick={exportCsv}
+          onClick={generateCSVFromState}
           className="flex items-center space-x-2 px-4 py-2 bg-bpi-navy text-white rounded-lg hover:bg-bpi-navy-light transition-colors shadow-sm"
         >
           <Download className="w-4 h-4" />
@@ -267,7 +267,7 @@ export default function ResultsList() {
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('Zone')}>Zone</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('plot_area')}>Plot Area (sqm)</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('allowed_gfa')}>Max GFA (sqm)</th>
-              <th className="px-6 py-4">Max Footprint (%)</th>
+              <th className="px-6 py-4" title="In the production phase, this will be replaced by the statutory planning limit">Existing Coverage (%)</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('gap')}>Gap (sqm)</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4"></th>
