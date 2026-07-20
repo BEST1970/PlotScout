@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
-import { ChevronDown, ChevronUp, Download } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Search, SlidersHorizontal } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
@@ -17,6 +17,9 @@ type ParcelRow = {
   gap: number;
   warning: string;
   pog_version: string;
+  lat?: number;
+  lon?: number;
+  address?: string;
   feedback?: "Correct" | "Incorrect" | "Unsure" | "";
   notes?: string;
 };
@@ -29,6 +32,9 @@ export default function ResultsList() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [geomData, setGeomData] = useState<{ [key: string]: any }>({});
   const [geomLoading, setGeomLoading] = useState(false);
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [minGap, setMinGap] = useState<number>(0);
 
   useEffect(() => {
     fetch("/data/results_ranked.csv")
@@ -44,12 +50,37 @@ export default function ResultsList() {
               ...row,
               feedback: "",
               notes: "",
+              address: "", // Will be populated by Nominatim
             }));
             setData(withFeedback as ParcelRow[]);
           },
         });
       });
   }, []);
+
+  // Rate-limited Reverse Geocoding queue
+  useEffect(() => {
+    const rowsToGeocode = data.filter(r => !r.address && r.lat && r.lon);
+    if (rowsToGeocode.length === 0) return;
+
+    const row = rowsToGeocode[0];
+    
+    const geocode = async () => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${row.lat}&lon=${row.lon}`);
+        const json = await res.json();
+        const address = json.address?.road ? `${json.address.road} ${json.address.house_number || ''}`.trim() : (json.display_name?.split(',')[0] || "Unknown");
+        
+        setData(prev => prev.map(r => r.parcel_id === row.parcel_id ? { ...r, address } : r));
+      } catch (e) {
+        console.error("Geocoding failed", e);
+        setData(prev => prev.map(r => r.parcel_id === row.parcel_id ? { ...r, address: "Unavailable" } : r));
+      }
+    };
+
+    const timer = setTimeout(geocode, 1500); // 1.5s delay to strictly respect Nominatim's 1 req/sec policy
+    return () => clearTimeout(timer);
+  }, [data]);
 
   const handleSort = (key: keyof ParcelRow) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -116,12 +147,19 @@ export default function ResultsList() {
     document.body.removeChild(link);
   };
 
+  const filteredData = data.filter((row) => {
+    const matchesSearch = row.parcel_id.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (row.address && row.address.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesGap = (row.gap || 0) >= minGap;
+    return matchesSearch && matchesGap;
+  });
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up">
       <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Batch Discovery Results</h2>
-          <p className="text-sm text-slate-500 mt-1">Review the top unused potential parcels ranked by the pipeline.</p>
+          <p className="text-sm text-slate-500 mt-1">Current Demo Dataset: Warsaw Mokotów District | Filtered for significant untapped potential.</p>
         </div>
         <button
           onClick={exportCsv}
@@ -132,11 +170,37 @@ export default function ResultsList() {
         </button>
       </div>
 
+      <div className="p-4 bg-white border-b border-slate-100 flex flex-col sm:flex-row gap-4 items-center">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input 
+            type="text" 
+            placeholder="Search by Parcel ID or Address..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-bpi-green/50 transition-all"
+          />
+        </div>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <SlidersHorizontal className="w-4 h-4 text-slate-400" />
+          <span className="text-sm text-slate-600 font-medium whitespace-nowrap">Min. Gap (sqm):</span>
+          <input 
+            type="range" 
+            min="0" max="25000" step="1000"
+            value={minGap}
+            onChange={(e) => setMinGap(Number(e.target.value))}
+            className="w-32 sm:w-48 accent-bpi-green"
+          />
+          <span className="text-sm font-bold text-slate-700 w-12 text-right">{minGap}+</span>
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('parcel_id')}>Parcel ID</th>
+              <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('address')}>Address</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('Zone')}>Zone</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('plot_area')}>Plot Area (sqm)</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('allowed_gfa')}>Max GFA (sqm)</th>
@@ -146,13 +210,16 @@ export default function ResultsList() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.map((row) => (
+            {filteredData.map((row) => (
               <React.Fragment key={row.parcel_id}>
                 <tr
                   className={`hover:bg-slate-50 transition-colors cursor-pointer ${expandedRow === row.parcel_id ? 'bg-slate-50' : ''}`}
                   onClick={() => handleExpand(row.parcel_id)}
                 >
                   <td className="px-6 py-4 font-medium text-slate-800">{row.parcel_id}</td>
+                  <td className="px-6 py-4 text-slate-600 font-medium">
+                    {row.address ? row.address : (row.lat ? <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border-2 border-slate-300 border-t-bpi-green animate-spin"></div>Loading...</span> : "N/A")}
+                  </td>
                   <td className="px-6 py-4"><span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-bold">{row.Zone}</span></td>
                   <td className="px-6 py-4 text-slate-600">{row.plot_area?.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
                   <td className="px-6 py-4 text-slate-600">{row.allowed_gfa?.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
