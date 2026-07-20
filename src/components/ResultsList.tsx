@@ -184,6 +184,7 @@ export default function ResultsList() {
       'Zone': formatZone(row.Zone),
       'Plot Area (sqm)': row.plot_area,
       'Max GFA (sqm)': row.allowed_gfa,
+      'Max Footprint (%)': row.plot_area ? ((row.existing_gfa || 0) / row.plot_area * 100).toFixed(1) + '%' : '0%',
       'Gap (sqm)': row.gap,
       'Status': row.feedback || "Pending",
       'Notes': row.notes || "",
@@ -266,6 +267,7 @@ export default function ResultsList() {
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('Zone')}>Zone</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('plot_area')}>Plot Area (sqm)</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('allowed_gfa')}>Max GFA (sqm)</th>
+              <th className="px-6 py-4">Max Footprint (%)</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('gap')}>Gap (sqm)</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4"></th>
@@ -289,6 +291,7 @@ export default function ResultsList() {
                   </td>
                   <td className="px-6 py-4 text-slate-600">{row.plot_area?.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
                   <td className="px-6 py-4 text-slate-600">{row.allowed_gfa?.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
+                  <td className="px-6 py-4 text-slate-600">{row.plot_area ? ((row.existing_gfa || 0) / row.plot_area * 100).toFixed(1) : 0}%</td>
                   <td className="px-6 py-4 font-bold text-bpi-green">{row.gap?.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
                   <td className="px-6 py-4">
                     {row.feedback ? (
