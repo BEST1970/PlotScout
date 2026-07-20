@@ -177,8 +177,15 @@ export default function ResultsList() {
     saveToLocalStorage(parcelId, { notes });
   };
 
+  const filteredData = data.filter((row) => {
+    const matchesSearch = row.parcel_id.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (row.address && row.address.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesGap = (row.gap || 0) >= minGap;
+    return matchesSearch && matchesGap;
+  });
+
   const generateCSVFromState = () => {
-    const exportData = data.map(row => ({
+    const exportData = filteredData.map(row => ({
       'Parcel ID': row.parcel_id,
       'Address': row.address || "",
       'Zone': formatZone(row.Zone),
@@ -202,13 +209,6 @@ export default function ResultsList() {
     link.click();
     document.body.removeChild(link);
   };
-
-  const filteredData = data.filter((row) => {
-    const matchesSearch = row.parcel_id.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (row.address && row.address.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesGap = (row.gap || 0) >= minGap;
-    return matchesSearch && matchesGap;
-  });
 
   const maxSliderVal = data.length > 0 ? Math.ceil(Math.max(...data.map(d => d.gap || 0)) / 1000) * 1000 : 25000;
 
