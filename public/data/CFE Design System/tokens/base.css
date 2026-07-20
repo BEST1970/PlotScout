@@ -1,0 +1,45 @@
+/* ============================================================
+   CFE — base element styles & a few utility primitives.
+   Kept minimal: tokens do the heavy lifting. Safe global resets only.
+   ============================================================ */
+
+.cfe-root,
+.cfe-scope {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Headings helper classes (opt-in, do not restyle bare tags globally) */
+.cfe-h1 { font-size: var(--fs-h1); font-weight: var(--fw-bold);     line-height: var(--lh-heading); letter-spacing: var(--ls-tight); }
+.cfe-h2 { font-size: var(--fs-h2); font-weight: var(--fw-bold);     line-height: var(--lh-heading); }
+.cfe-h3 { font-size: var(--fs-h3); font-weight: var(--fw-semibold); line-height: var(--lh-heading); }
+.cfe-h4 { font-size: var(--fs-h4); font-weight: var(--fw-semibold); line-height: var(--lh-heading); }
+.cfe-h5 { font-size: var(--fs-h5); font-weight: var(--fw-medium); }
+.cfe-h6 { font-size: var(--fs-h6); font-weight: var(--fw-medium); }
+.cfe-body   { font-size: var(--fs-body);    font-weight: var(--fw-regular); }
+.cfe-caption{ font-size: var(--fs-caption); font-weight: var(--fw-regular); color: var(--text-secondary); }
+
+/* Wide-tracked uppercase eyebrow used on brand-book section headers */
+.cfe-eyebrow {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-eyebrow);
+  text-transform: uppercase;
+  color: var(--cfe-cyan);
+}
+
+/* The signature secondary gradient — text and rule helpers */
+.cfe-gradient-rule { height: 4px; border: 0; border-radius: var(--radius-pill); background: var(--cfe-gradient); }
+.cfe-gradient-text {
+  background: var(--cfe-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Icon sizing helper for inline brand SVGs (currentColor) */
+.cfe-icon { width: 1em; height: 1em; display: inline-block; vertical-align: -0.125em; fill: currentColor; }

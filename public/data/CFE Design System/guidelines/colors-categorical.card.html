@@ -1,0 +1,15 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Categorical / data-viz palette" subtitle="CFE series colours for charts & legends" -->
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+ body{margin:0;background:#fff;font-family:var(--font-sans)}
+ .wrap{padding:20px;display:grid;grid-template-columns:repeat(9,1fr);gap:8px}
+ .sw{height:42px;border-radius:var(--radius-xs)}
+ .lab{font-size:9px;color:var(--text-secondary);text-align:center;margin-top:4px}
+ .cell{display:flex;flex-direction:column}
+</style></head>
+<body><div class="wrap" id="r"></div>
+<script>
+ const cats=['#6EB54F','#20A13C','#7BC5B4','#1FA149','#10A4A8','#6F64A9','#2D3C91','#1C54A1','#138337','#198B8B','#14813D','#123F80','#263377','#255A40','#44674F','#93BF4C','#4563AB','#54B2E5'];
+ document.getElementById('r').innerHTML=cats.map(c=>`<div class="cell"><div class="sw" style="background:${c}"></div><div class="lab">${c}</div></div>`).join('');
+</script>
+</body></html>

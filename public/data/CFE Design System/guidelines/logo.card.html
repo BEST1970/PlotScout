@@ -1,0 +1,23 @@
+<!-- @dsCard group="Brand" viewport="700x220" name="Logo — CFE" subtitle="CFE hexagon + wordmark · on light and navy" -->
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+ body{margin:0;font-family:var(--font-sans)}
+ .wrap{display:grid;grid-template-columns:1fr 1fr;height:220px}
+ .cell{display:flex;align-items:center;justify-content:center;gap:16px}
+ .light{background:#fff}
+ .dark{background:var(--cfe-navy)}
+ .hex{display:inline-flex;align-items:center;justify-content:center;height:72px}
+ .hex img{height:100%;width:auto;object-fit:contain}
+ .chip{background:#fff;border-radius:14px;padding:9px}
+ .word{font-size:46px;font-weight:700;letter-spacing:.04em}
+</style></head>
+<body><div class="wrap">
+ <div class="cell light">
+   <span class="hex"><img src="../assets/hexagon-cfe-green.jpg" alt="CFE"></span>
+   <span class="word" style="color:var(--cfe-navy)">CFE</span>
+ </div>
+ <div class="cell dark">
+   <span class="hex chip"><img src="../assets/hexagon-cfe-green.jpg" alt="CFE"></span>
+   <span class="word" style="color:#fff">CFE</span>
+ </div>
+</div></body></html>

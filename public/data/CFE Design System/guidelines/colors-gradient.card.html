@@ -1,0 +1,19 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Secondary gradient" subtitle="Teal→blue — always used as a gradient, never as separate colours" -->
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+ body{margin:0;background:#fff;font-family:var(--font-sans)}
+ .wrap{padding:20px}
+ .bar{height:48px;border-radius:var(--radius-pill);background:var(--cfe-gradient)}
+ .stops{display:flex;justify-content:space-between;margin-top:14px}
+ .stop{font-size:11px;line-height:1.6;white-space:nowrap;flex:1}
+ .dot{width:18px;height:18px;border-radius:50%;margin-bottom:6px}
+ .name{font-weight:700}
+</style></head>
+<body><div class="wrap">
+ <div class="bar"></div>
+ <div class="stops">
+   <div class="stop"><div class="dot" style="background:var(--cfe-grad-start)"></div><div class="name">0% · #7AC4B3</div><div>RGB 122 196 179</div></div>
+   <div class="stop" style="text-align:center"><div class="dot" style="background:var(--cfe-grad-mid);margin:0 auto 6px"></div><div class="name">50% · #91D4F5</div><div>RGB 145 212 245</div></div>
+   <div class="stop" style="text-align:right"><div class="dot" style="background:var(--cfe-grad-end);margin-left:auto;margin-bottom:6px"></div><div class="name">100% · #00A2DE</div><div>RGB 0 162 222</div></div>
+ </div>
+</div></body></html>

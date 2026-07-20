@@ -1,0 +1,75 @@
+/* ============================================================
+   CFE — COLOR TOKENS
+   Built on the VMA brand book + the CFE application styling guide.
+   Primary identity: deep navy + white. Secondary identity: a teal→blue
+   gradient that is ALWAYS used as a gradient, never as separate colours.
+   ============================================================ */
+
+:root {
+  /* ---- Primary brand ---- */
+  --cfe-navy: #00173A;            /* primary colour — Pantone 282C / RAL 5011 */
+  --cfe-navy-deep: #001129;       /* MOM-team preferred darkest navy (footer/headers) */
+  --cfe-white: #FFFFFF;           /* second primary colour */
+
+  /* ---- Derived navy tints (depth in digital apps — never used as MAIN colours) ---- */
+  --cfe-navy-05: #D2D8E3;         /* 5%  */
+  --cfe-navy-20: #ADB6CA;         /* 20% */
+  --cfe-navy-60: #43587B;         /* 60% */
+  --cfe-navy-80: #16365B;         /* 80% */
+  /* Working navies seen across the application chrome */
+  --cfe-navy-panel: #01143D;
+  --cfe-navy-line: #0C365D;
+  --cfe-surface-200: #E3E6EE;     /* light panel / app canvas */
+
+  /* ---- Secondary gradient (use as a gradient ONLY) ---- */
+  --cfe-grad-start: #7AC4B3;      /* 0%   teal-green */
+  --cfe-grad-mid:   #91D4F5;      /* 50%  light blue */
+  --cfe-grad-end:   #00A2DE;      /* 100% blue */
+  --cfe-gradient: linear-gradient(90deg, var(--cfe-grad-start) 0%, var(--cfe-grad-mid) 50%, var(--cfe-grad-end) 100%);
+
+  /* ---- Application accents (charts, bars, KPI tiles) ---- */
+  --cfe-cyan: #00ADE5;
+  --cfe-blue: #0080C8;
+  --cfe-teal: #00A781;
+  --cfe-teal-deep: #008779;
+  --cfe-sky: #91D4F5;
+
+  /* ---- CFE categorical palette (data-viz / series colours) ---- */
+  --cfe-cat-1:  #6EB54F;  --cfe-cat-2:  #20A13C;  --cfe-cat-3:  #7BC5B4;
+  --cfe-cat-4:  #1FA149;  --cfe-cat-5:  #10A4A8;  --cfe-cat-6:  #6F64A9;
+  --cfe-cat-7:  #2D3C91;  --cfe-cat-8:  #1C54A1;  --cfe-cat-9:  #138337;
+  --cfe-cat-10: #198B8B;  --cfe-cat-11: #14813D;  --cfe-cat-12: #123F80;
+  --cfe-cat-13: #263377;  --cfe-cat-14: #255A40;  --cfe-cat-15: #44674F;
+  --cfe-cat-16: #93BF4C;  --cfe-cat-17: #4563AB;  --cfe-cat-18: #54B2E5;
+
+  /* ---- Status ---- */
+  --cfe-success: #18A781;
+  --cfe-warning: #E97132;
+  --cfe-danger:  #E5202B;   /* alerts/required — softened from the raw #FF0000 in screens */
+  --cfe-danger-pure: #FF0000;
+
+  /* ============================================================
+     SEMANTIC ALIASES — reference these in components
+     ============================================================ */
+  --color-bg: var(--cfe-surface-200);          /* app canvas */
+  --color-surface: var(--cfe-white);           /* cards / panels */
+  --color-surface-sunken: #F4F6FA;             /* zebra rows, wells */
+  --color-surface-inverse: var(--cfe-navy);    /* dark panels / header / footer */
+  --color-surface-inverse-deep: var(--cfe-navy-deep);
+
+  --text-primary: var(--cfe-navy);
+  --text-secondary: var(--cfe-navy-60);
+  --text-muted: var(--cfe-navy-20);
+  --text-on-dark: var(--cfe-white);
+  --text-on-dark-muted: #9FB0C8;
+  --text-link: var(--cfe-blue);
+
+  --border: #D7DEEA;
+  --border-strong: var(--cfe-navy-20);
+  --border-inverse: rgba(255,255,255,0.16);
+
+  --brand-primary: var(--cfe-navy);
+  --brand-accent: var(--cfe-cyan);
+
+  --focus-ring: var(--cfe-cyan);
+}

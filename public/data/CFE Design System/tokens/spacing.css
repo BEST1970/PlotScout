@@ -1,0 +1,33 @@
+/* ============================================================
+   CFE — SPACING TOKENS
+   8px base rhythm. The styling guide sizes header/icon components in vw
+   with clamp() so they scale with the viewport; fixed-px tokens below are
+   the default rhythm for panels, forms and tables.
+   ============================================================ */
+
+:root {
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ---- Component sizing (from the guide's "Component scaling" page) ---- */
+  --header-height: 64px;          /* fixed header; guide: ~3vw, always in viewport */
+  --header-height-fluid: clamp(56px, 4vw, 72px);  /* @kind spacing */
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+  --control-height: 38px;         /* inputs / selects / buttons */
+  --control-height-sm: 30px;
+  --sidebar-width: 248px;
+
+  --container-max: 1440px;
+  --gutter: var(--space-6);
+}

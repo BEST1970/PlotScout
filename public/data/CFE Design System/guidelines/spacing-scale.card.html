@@ -1,0 +1,15 @@
+<!-- @dsCard group="Spacing" viewport="700x180" name="Spacing scale" subtitle="8px base rhythm" -->
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+ body{margin:0;background:#fff;font-family:var(--font-sans);color:var(--cfe-navy)}
+ .wrap{padding:22px 24px;display:flex;flex-direction:column;gap:9px}
+ .row{display:flex;align-items:center;gap:14px}
+ .tag{width:120px;flex:none;font-size:11px;color:var(--text-secondary)}
+ .bar{height:14px;background:var(--cfe-cyan);border-radius:3px}
+</style></head>
+<body><div class="wrap" id="r"></div>
+<script>
+ const t=[['space-1','4px'],['space-2','8px'],['space-3','12px'],['space-4','16px'],['space-6','24px'],['space-8','32px'],['space-12','48px'],['space-16','64px']];
+ document.getElementById('r').innerHTML=t.map(([n,v])=>`<div class="row"><span class="tag">--${n} · ${v}</span><span class="bar" style="width:${v}"></span></div>`).join('');
+</script>
+</body></html>

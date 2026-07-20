@@ -1,0 +1,45 @@
+<!-- @dsCard group="Components" viewport="700x240" name="Badges & Alerts" subtitle="Status labels and inline messages" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  body { margin: 0; background: var(--color-bg); font-family: var(--font-sans); }
+  .wrap { padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+</style>
+</head>
+<body>
+<div class="wrap" id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+  const { Badge, Alert } = window.CFEDesignSystem_1ee1e2;
+  function Demo() {
+    return (
+      <>
+        <div className="row">
+          <Badge tone="success">Executed</Badge>
+          <Badge tone="info">Planned</Badge>
+          <Badge tone="warning">Review</Badge>
+          <Badge tone="danger">Overdue</Badge>
+          <Badge tone="cyan">+2%</Badge>
+          <Badge tone="neutral">Draft</Badge>
+        </div>
+        <div className="row">
+          <Badge tone="success" solid>Online</Badge>
+          <Badge tone="danger" solid>Stopped</Badge>
+          <Badge tone="cyan" solid>Live</Badge>
+        </div>
+        <Alert tone="warning" title="OEE Below Target! (85.0%)" />
+        <Alert tone="info" title="Heads up">Data refreshes every 15 minutes from the line controllers.</Alert>
+      </>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+</script>
+</body>
+</html>

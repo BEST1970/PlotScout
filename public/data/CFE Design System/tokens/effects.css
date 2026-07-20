@@ -1,0 +1,34 @@
+/* ============================================================
+   CFE — EFFECTS: radii, borders, shadows, motion
+   Application chrome uses small radii (~6px) and crisp 1px borders.
+   Brand-book content cards use a larger 16px radius with a circular
+   chevron affordance. Shadows are soft and low-contrast on the light
+   grey canvas; dark panels sit flat.
+   ============================================================ */
+
+:root {
+  /* ---- Radii ---- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;     /* buttons, inputs, selects (application) */
+  --radius-md: 10px;    /* panels / tiles */
+  --radius-lg: 16px;    /* brand content cards */
+  --radius-pill: 999px; /* chevron buttons, chips */
+
+  /* ---- Borders ---- */
+  --border-width: 1px;          /* @kind other */
+  --border-width-strong: 2px;   /* @kind other */
+
+  /* ---- Shadows (soft, cool-tinted to sit on the grey canvas) ---- */
+  --shadow-xs: 0 1px 2px rgba(0, 23, 58, 0.06);
+  --shadow-sm: 0 1px 3px rgba(0, 23, 58, 0.08), 0 1px 2px rgba(0, 23, 58, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 23, 58, 0.10);
+  --shadow-lg: 0 12px 32px rgba(0, 23, 58, 0.14);
+  --shadow-focus: 0 0 0 3px rgba(0, 173, 229, 0.35);  /* cyan focus ring */
+
+  /* ---- Motion ---- */
+  --ease-standard: cubic-bezier(0.2, 0, 0.2, 1);   /* @kind other */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);       /* @kind other */
+  --dur-fast: 120ms;   /* @kind other */
+  --dur-base: 200ms;   /* @kind other */
+  --dur-slow: 320ms;   /* @kind other */
+}

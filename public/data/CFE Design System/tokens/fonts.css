@@ -1,0 +1,8 @@
+/* ============================================================
+   CFE — FONTS
+   Poppins is the brand typeface (open-source, available on Google Fonts).
+   Loaded here from Google Fonts so the @font-face closure ships to consumers.
+   Allowed weights only: 300 / 400 / 500 / 600 / 700.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
