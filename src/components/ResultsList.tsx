@@ -4,17 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 import { ChevronDown, ChevronUp, Download } from "lucide-react";
 import "leaflet/dist/leaflet.css";
-import { parse } from "wellknown";
-import proj4 from "proj4";
 
-proj4.defs("EPSG:2180", "+proj=tmerc +lat_0=0 +lon_0=19 +k=0.9993 +x_0=500000 +y_0=-5300000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
-
-function transformCoords(coords: any): any {
-  if (typeof coords[0] === 'number') {
-    return proj4("EPSG:2180", "EPSG:4326", [coords[0], coords[1]]);
-  }
-  return coords.map(transformCoords);
-}
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -90,12 +80,8 @@ export default function ResultsList() {
       try {
         const res = await fetch(`/api/parcel-geom?parcel_id=${encodeURIComponent(parcelId)}`);
         const result = await res.json();
-        if (result.wkt) {
-          const geojson = parse(result.wkt);
-          if (geojson && (geojson as any).coordinates) {
-            (geojson as any).coordinates = transformCoords((geojson as any).coordinates);
-          }
-          setGeomData((prev) => ({ ...prev, [parcelId]: geojson as any }));
+        if (result && result.coordinates) {
+          setGeomData((prev) => ({ ...prev, [parcelId]: result }));
         }
       } catch (e) {
         console.error("Error fetching geom:", e);
