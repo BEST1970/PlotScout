@@ -178,7 +178,19 @@ export default function ResultsList() {
   };
 
   const exportCsv = () => {
-    const csv = Papa.unparse(data);
+    const exportData = data.map(row => ({
+      'Parcel ID': row.parcel_id,
+      'Address': row.address || "",
+      'Zone': formatZone(row.Zone),
+      'Plot Area (sqm)': row.plot_area,
+      'Max GFA (sqm)': row.allowed_gfa,
+      'Gap (sqm)': row.gap,
+      'Status': row.feedback || "Pending",
+      'Notes': row.notes || "",
+      'Warning': row.warning || "",
+      'POG Version': row.pog_version || ""
+    }));
+    const csv = Papa.unparse(exportData);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
