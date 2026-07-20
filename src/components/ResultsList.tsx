@@ -211,6 +211,7 @@ export default function ResultsList() {
   };
 
   const maxSliderVal = data.length > 0 ? Math.ceil(Math.max(...data.map(d => d.gap || 0)) / 1000) * 1000 : 25000;
+  const geocodingRemaining = data.filter(r => !r.address && r.lat && r.lon).length;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up">
@@ -223,8 +224,14 @@ export default function ResultsList() {
           onClick={generateCSVFromState}
           className="flex items-center space-x-2 px-4 py-2 bg-bpi-navy text-white rounded-lg hover:bg-bpi-navy-light transition-colors shadow-sm"
         >
-          <Download className="w-4 h-4" />
-          <span className="font-medium text-sm">Export CSV</span>
+          {geocodingRemaining > 0 ? (
+            <div className="w-4 h-4 rounded-full border-2 border-slate-300 border-t-white animate-spin"></div>
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
+          <span className="font-medium text-sm">
+            {geocodingRemaining > 0 ? `Export CSV (${geocodingRemaining} left...)` : 'Export CSV'}
+          </span>
         </button>
       </div>
 
