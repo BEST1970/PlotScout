@@ -58,12 +58,25 @@ export default function ResultsList() {
           skipEmptyLines: true,
           complete: (results) => {
             const parsed = results.data as ParcelRow[];
-            const withFeedback = parsed.map((row) => ({
-              ...row,
-              feedback: "",
-              notes: "",
-              address: "", // Will be populated by Nominatim
-            }));
+            
+            // Read from localStorage
+            let savedState: Record<string, any> = {};
+            try {
+              const savedStateStr = localStorage.getItem("parcelValidationState");
+              if (savedStateStr) savedState = JSON.parse(savedStateStr);
+            } catch (e) {
+              console.error("Error reading localStorage", e);
+            }
+            
+            const withFeedback = parsed.map((row) => {
+              const saved = savedState[row.parcel_id] || {};
+              return {
+                ...row,
+                feedback: saved.feedback || "",
+                notes: saved.notes || "",
+                address: "", // Will be populated by Nominatim
+              };
+            });
             setData(withFeedback as ParcelRow[]);
           },
         });
@@ -134,16 +147,34 @@ export default function ResultsList() {
     }
   };
 
+  const saveToLocalStorage = (parcelId: string, updates: Partial<ParcelRow>) => {
+    try {
+      const savedStateStr = localStorage.getItem("parcelValidationState");
+      const savedState = savedStateStr ? JSON.parse(savedStateStr) : {};
+      
+      savedState[parcelId] = {
+        ...savedState[parcelId],
+        ...updates
+      };
+      
+      localStorage.setItem("parcelValidationState", JSON.stringify(savedState));
+    } catch (e) {
+      console.error("Error saving to localStorage", e);
+    }
+  };
+
   const updateFeedback = (parcelId: string, feedback: "Correct" | "Incorrect" | "Unsure") => {
     setData((prev) =>
       prev.map((row) => (row.parcel_id === parcelId ? { ...row, feedback } : row))
     );
+    saveToLocalStorage(parcelId, { feedback });
   };
 
   const updateNotes = (parcelId: string, notes: string) => {
     setData((prev) =>
       prev.map((row) => (row.parcel_id === parcelId ? { ...row, notes } : row))
     );
+    saveToLocalStorage(parcelId, { notes });
   };
 
   const exportCsv = () => {
