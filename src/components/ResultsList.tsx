@@ -26,6 +26,18 @@ type ParcelRow = {
 
 // Next.js needs a hack for leaflet icons if used, but we only use GeoJSON here
 
+const formatZone = (zone: string) => {
+  if (!zone) return "Unknown";
+  const upper = zone.toUpperCase();
+  switch (upper) {
+    case "SW": return "Leisure / Mixed-Use";
+    case "SJ": return "Single-Family Residential";
+    case "SN": return "Multi-Family Residential";
+    case "SU": return "Commercial / Services";
+    default: return upper;
+  }
+};
+
 export default function ResultsList() {
   const [data, setData] = useState<ParcelRow[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: keyof ParcelRow; direction: 'asc' | 'desc' } | null>(null);
@@ -154,12 +166,14 @@ export default function ResultsList() {
     return matchesSearch && matchesGap;
   });
 
+  const maxSliderVal = data.length > 0 ? Math.ceil(Math.max(...data.map(d => d.gap || 0)) / 1000) * 1000 : 25000;
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up">
       <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Batch Discovery Results</h2>
-          <p className="text-sm text-slate-500 mt-1">Current Demo Dataset: Warsaw Mokotów District | Filtered for significant untapped potential.</p>
+          <p className="text-sm text-slate-500 mt-1">Current Demo Dataset: Białołęka District | Filtered for significant untapped potential.</p>
         </div>
         <button
           onClick={exportCsv}
@@ -183,15 +197,20 @@ export default function ResultsList() {
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <SlidersHorizontal className="w-4 h-4 text-slate-400" />
-          <span className="text-sm text-slate-600 font-medium whitespace-nowrap">Min. Gap (sqm):</span>
-          <input 
-            type="range" 
-            min="0" max="25000" step="1000"
-            value={minGap}
-            onChange={(e) => setMinGap(Number(e.target.value))}
-            className="w-32 sm:w-48 accent-bpi-green"
-          />
-          <span className="text-sm font-bold text-slate-700 w-12 text-right">{minGap}+</span>
+          <span className="text-sm text-slate-600 font-medium whitespace-nowrap">
+            Min. Gap (sqm): <span className="font-bold text-slate-800">{minGap.toLocaleString()}</span>
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 font-medium">0</span>
+            <input 
+              type="range" 
+              min="0" max={maxSliderVal} step="1000"
+              value={minGap}
+              onChange={(e) => setMinGap(Number(e.target.value))}
+              className="w-32 sm:w-48 accent-bpi-green"
+            />
+            <span className="text-xs text-slate-400 font-medium">{maxSliderVal.toLocaleString()}</span>
+          </div>
         </div>
       </div>
 
@@ -220,7 +239,11 @@ export default function ResultsList() {
                   <td className="px-6 py-4 text-slate-600 font-medium">
                     {row.address ? row.address : (row.lat ? <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border-2 border-slate-300 border-t-bpi-green animate-spin"></div>Loading...</span> : "N/A")}
                   </td>
-                  <td className="px-6 py-4"><span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-bold">{row.Zone}</span></td>
+                  <td className="px-6 py-4">
+                    <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-bold whitespace-nowrap">
+                      {formatZone(row.Zone)}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 text-slate-600">{row.plot_area?.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
                   <td className="px-6 py-4 text-slate-600">{row.allowed_gfa?.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
                   <td className="px-6 py-4 font-bold text-bpi-green">{row.gap?.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
