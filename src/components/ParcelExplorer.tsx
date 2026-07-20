@@ -5,7 +5,8 @@ import { Search, Loader2 } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import proj4 from "proj4";
 
-import { MapContainer, TileLayer, WMSTileLayer, useMapEvents, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, WMSTileLayer, useMapEvents, useMap, Marker } from 'react-leaflet';
+import L from 'leaflet';
 
 proj4.defs("EPSG:2180", "+proj=tmerc +lat_0=0 +lon_0=19 +k=0.9993 +x_0=500000 +y_0=-5300000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
 
@@ -56,6 +57,16 @@ export default function ParcelExplorer() {
     }, [searchCoords, map]);
     return null;
   };
+
+  const customIcon = new L.Icon({
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+  });
 
   const MapClickHandler = () => {
     useMapEvents({
@@ -228,6 +239,7 @@ export default function ParcelExplorer() {
             version="1.1.1"
           />
           <MapUpdater />
+          {searchCoords && <Marker position={searchCoords} icon={customIcon} />}
           <MapClickHandler />
         </MapContainer>
       </div>

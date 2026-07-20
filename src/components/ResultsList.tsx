@@ -196,10 +196,15 @@ export default function ResultsList() {
                         {/* Map Section */}
                         <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden min-h-[300px] relative z-0">
                           {geomLoading && <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-bpi-green"></div></div>}
-                          {geomData[row.parcel_id] && (
+                          {!geomLoading && (!geomData[row.parcel_id] || !geomData[row.parcel_id].coordinates) && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-slate-50 text-slate-500 font-medium z-0">
+                              Geometry currently unavailable
+                            </div>
+                          )}
+                          {geomData[row.parcel_id] && geomData[row.parcel_id].coordinates && (
                             <MapContainer
                               bounds={L.geoJSON(geomData[row.parcel_id]).getBounds()}
-                              className="h-full w-full"
+                              style={{ height: '300px', width: '100%' }}
                               zoomControl={false}
                             >
                               <TileLayer
