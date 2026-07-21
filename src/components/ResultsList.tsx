@@ -145,16 +145,46 @@ export default function ResultsList() {
   };
   
   const wmsErrorShownRef = useRef(false);
+  const wmsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (showOwnershipLayer) {
+      // Set a manual timeout. If tiles take longer than 8s, we assume it failed or timed out.
+      wmsTimeoutRef.current = setTimeout(() => {
+        if (!wmsErrorShownRef.current) {
+          wmsErrorShownRef.current = true;
+          toast.error('Warsaw Municipal Server is currently unavailable. Cannot load ownership overlay.', {
+            duration: 6000,
+            position: 'bottom-right',
+            id: 'wms-timeout'
+          });
+        }
+      }, 8000);
+    } else {
+      if (wmsTimeoutRef.current) clearTimeout(wmsTimeoutRef.current);
+      wmsErrorShownRef.current = false;
+    }
+    return () => {
+      if (wmsTimeoutRef.current) clearTimeout(wmsTimeoutRef.current);
+    };
+  }, [showOwnershipLayer]);
 
   const handleWmsError = (error: any) => {
     console.error("WMS Tile Error loading Ownership Layer:", error);
     if (!wmsErrorShownRef.current) {
       wmsErrorShownRef.current = true;
-      showToast('Warsaw Municipal Server is currently unavailable or timing out. Cannot load ownership overlay.');
-      // Reset the flag after 10 seconds to avoid spamming if they keep toggling
-      setTimeout(() => {
-        wmsErrorShownRef.current = false;
-      }, 10000);
+      toast.error('Warsaw Municipal Server is currently unavailable. Cannot load ownership overlay.', {
+        duration: 6000,
+        position: 'bottom-right',
+        id: 'wms-timeout'
+      });
+    }
+  };
+
+  const handleTileLoad = () => {
+    if (wmsTimeoutRef.current) {
+      clearTimeout(wmsTimeoutRef.current);
+      wmsTimeoutRef.current = null;
     }
   };
   
@@ -626,7 +656,7 @@ export default function ResultsList() {
                                   transparent={true}
                                   opacity={0.8}
                                   crs={L.CRS.EPSG4326}
-                                  eventHandlers={{ tileerror: handleWmsError }}
+                                  eventHandlers={{ tileerror: handleWmsError, tileload: handleTileLoad }}
                                 />
                               )}
                               <Marker position={[row.lat, row.lon]} />
@@ -648,7 +678,7 @@ export default function ResultsList() {
                                   transparent={true}
                                   opacity={0.8}
                                   crs={L.CRS.EPSG4326}
-                                  eventHandlers={{ tileerror: handleWmsError }}
+                                  eventHandlers={{ tileerror: handleWmsError, tileload: handleTileLoad }}
                                 />
                               )}
                               <GeoJSON 
