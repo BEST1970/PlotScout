@@ -126,7 +126,7 @@ export default function ResultsList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [minGap, setMinGap] = useState<number>(0);
   const [selectedDistricts, setSelectedDistricts] = useState<string[]>(DISTRICTS);
-  const [maxMetroDistance, setMaxMetroDistance] = useState<number>(2000);
+  const [maxMetroDistance, setMaxMetroDistance] = useState<number>(15000);
   const [isDistrictDropdownOpen, setIsDistrictDropdownOpen] = useState(false);
 
   useEffect(() => {
@@ -340,7 +340,7 @@ export default function ResultsList() {
   const geocodingRemaining = data.filter(r => !r.address && r.lat && r.lon).length;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 animate-fade-in-up">
       <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Batch Discovery Results</h2>
@@ -363,7 +363,7 @@ export default function ResultsList() {
         </button>
       </div>
 
-      <div className="p-4 bg-white border-b border-slate-100 flex flex-col sm:flex-row gap-4 items-center">
+      <div className="p-4 bg-white border-b border-slate-100 flex flex-col sm:flex-row gap-4 items-center relative z-20">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input 
@@ -402,12 +402,12 @@ export default function ResultsList() {
               <span className="text-xs text-slate-400 font-medium">50</span>
               <input 
                 type="range" 
-                min="50" max="2000" step="50"
+                min="50" max="15000" step="250"
                 value={maxMetroDistance}
                 onChange={(e) => setMaxMetroDistance(Number(e.target.value))}
                 className="w-24 sm:w-32 accent-bpi-navy"
               />
-              <span className="text-xs text-slate-400 font-medium">2000</span>
+              <span className="text-xs text-slate-400 font-medium">15000</span>
             </div>
           </div>
 
