@@ -276,8 +276,8 @@ export default function ResultsList() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-max text-left border-collapse">
+      <div className="w-full overflow-x-auto">
+        <table className="w-full whitespace-nowrap text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('parcel_id')}>Parcel ID</th>

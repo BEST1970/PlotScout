@@ -13,7 +13,7 @@ export default function PlotScout() {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800 selection:bg-bpi-green selection:text-white">
       {/* ── Top navigation ── */}
       <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-40">
-        <div className="w-[95%] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4 group">
             <img 
               src="/data/bpi_real_estate_uban_shapers_for_good.svg" 
@@ -56,7 +56,7 @@ export default function PlotScout() {
       </header>
 
       {/* ── Page content ── */}
-      <main className="flex-1 w-[95%] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === "results" ? (
           <ResultsList />
         ) : (
