@@ -20,7 +20,8 @@ type ParcelRow = {
   lat?: number;
   lon?: number;
   address?: string;
-  feedback?: "Correct" | "Incorrect" | "Unsure" | "";
+  statusData?: "Pending" | "Correct" | "Unsure" | "Incorrect";
+  statusProspect?: "Pending" | "Interesting" | "Not Interesting";
   notes?: string;
 };
 
@@ -72,7 +73,8 @@ export default function ResultsList() {
               const saved = savedState[row.parcel_id] || {};
               return {
                 ...row,
-                feedback: saved.feedback || "",
+                statusData: saved.statusData || "Pending",
+                statusProspect: saved.statusProspect || "Pending",
                 notes: saved.notes || "",
                 address: "", // Will be populated by Nominatim
               };
@@ -163,11 +165,18 @@ export default function ResultsList() {
     }
   };
 
-  const updateFeedback = (parcelId: string, feedback: "Correct" | "Incorrect" | "Unsure") => {
+  const updateStatusData = (parcelId: string, statusData: ParcelRow["statusData"]) => {
     setData((prev) =>
-      prev.map((row) => (row.parcel_id === parcelId ? { ...row, feedback } : row))
+      prev.map((row) => (row.parcel_id === parcelId ? { ...row, statusData } : row))
     );
-    saveToLocalStorage(parcelId, { feedback });
+    saveToLocalStorage(parcelId, { statusData });
+  };
+
+  const updateStatusProspect = (parcelId: string, statusProspect: ParcelRow["statusProspect"]) => {
+    setData((prev) =>
+      prev.map((row) => (row.parcel_id === parcelId ? { ...row, statusProspect } : row))
+    );
+    saveToLocalStorage(parcelId, { statusProspect });
   };
 
   const updateNotes = (parcelId: string, notes: string) => {
@@ -190,10 +199,12 @@ export default function ResultsList() {
       'Address': row.address || "",
       'Zone': formatZone(row.Zone),
       'Plot Area (sqm)': row.plot_area,
+      'Existing Built (sqm)': row.existing_gfa,
       'Max GFA (sqm)': row.allowed_gfa,
-      'Existing Coverage (%)': row.plot_area ? ((row.existing_gfa || 0) / row.plot_area * 100).toFixed(1) + '%' : '0%',
+      'Existing Coverage (%)': row.allowed_gfa ? ((row.existing_gfa || 0) / row.allowed_gfa * 100).toFixed(1) + '%' : '0%',
       'Gap (sqm)': row.gap,
-      'Status': row.feedback || "Pending",
+      'Status Data': row.statusData || "Pending",
+      'Status Prospect': row.statusProspect || "Pending",
       'Notes': row.notes || "",
       'Warning': row.warning || "",
       'POG Version': row.pog_version || ""
@@ -273,10 +284,12 @@ export default function ResultsList() {
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('address')}>Address</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('Zone')}>Zone</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('plot_area')}>Plot Area (sqm)</th>
+              <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('existing_gfa')}>Existing Built (sqm)</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('allowed_gfa')}>Max GFA (sqm)</th>
               <th className="px-6 py-4" title="In the production phase, this will be replaced by the statutory planning limit">Existing Coverage (%)</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('gap')}>Gap (sqm)</th>
-              <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('statusData')}>Status Data</th>
+              <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('statusProspect')}>Status Prospect</th>
               <th className="px-6 py-4"></th>
             </tr>
           </thead>
@@ -297,20 +310,32 @@ export default function ResultsList() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-slate-600">{row.plot_area?.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
+                  <td className="px-6 py-4 text-slate-600">{row.existing_gfa?.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
                   <td className="px-6 py-4 text-slate-600">{row.allowed_gfa?.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
-                  <td className="px-6 py-4 text-slate-600">{row.plot_area ? ((row.existing_gfa || 0) / row.plot_area * 100).toFixed(1) : 0}%</td>
+                  <td className="px-6 py-4 text-slate-600">{row.allowed_gfa ? ((row.existing_gfa || 0) / row.allowed_gfa * 100).toFixed(1) : 0}%</td>
                   <td className="px-6 py-4 font-bold text-bpi-green">{row.gap?.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
-                  <td className="px-6 py-4">
-                    {row.feedback ? (
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        row.feedback === 'Correct' ? 'bg-bpi-green-light/20 text-bpi-green-dark' :
-                        row.feedback === 'Incorrect' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                      }`}>
-                        {row.feedback}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-slate-400 font-medium">Pending</span>
-                    )}
+                  <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                    <select 
+                      value={row.statusData || "Pending"} 
+                      onChange={(e) => updateStatusData(row.parcel_id, e.target.value as any)}
+                      className={`text-xs font-bold rounded px-2 py-1 outline-none cursor-pointer border-transparent focus:border-bpi-green focus:ring-1 focus:ring-bpi-green transition-all ${row.statusData === 'Correct' ? 'bg-bpi-green-light/20 text-bpi-green-dark' : row.statusData === 'Incorrect' ? 'bg-red-100 text-red-700' : row.statusData === 'Unsure' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-500'}`}
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Correct">Correct</option>
+                      <option value="Unsure">Unsure</option>
+                      <option value="Incorrect">Incorrect</option>
+                    </select>
+                  </td>
+                  <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                    <select 
+                      value={row.statusProspect || "Pending"} 
+                      onChange={(e) => updateStatusProspect(row.parcel_id, e.target.value as any)}
+                      className={`text-xs font-bold rounded px-2 py-1 outline-none cursor-pointer border-transparent focus:border-bpi-green focus:ring-1 focus:ring-bpi-green transition-all ${row.statusProspect === 'Interesting' ? 'bg-bpi-navy-light text-white' : row.statusProspect === 'Not Interesting' ? 'bg-slate-300 text-slate-700' : 'bg-slate-100 text-slate-500'}`}
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Interesting">Interesting</option>
+                      <option value="Not Interesting">Not Interesting</option>
+                    </select>
                   </td>
                   <td className="px-6 py-4 text-slate-400">
                     {expandedRow === row.parcel_id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -351,24 +376,41 @@ export default function ResultsList() {
                         <div className="w-full lg:w-80 flex flex-col space-y-4">
                           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                             <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-3">Validate Result</h4>
+                            <label className="text-xs font-semibold text-slate-600 block mb-2">Data Quality</label>
                             <div className="flex gap-2 mb-4">
                               <button 
-                                onClick={() => updateFeedback(row.parcel_id, "Correct")}
-                                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${row.feedback === 'Correct' ? 'bg-bpi-green text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                onClick={() => updateStatusData(row.parcel_id, "Correct")}
+                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${row.statusData === 'Correct' ? 'bg-bpi-green text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                               >
                                 Correct
                               </button>
                               <button 
-                                onClick={() => updateFeedback(row.parcel_id, "Unsure")}
-                                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${row.feedback === 'Unsure' ? 'bg-orange-400 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                onClick={() => updateStatusData(row.parcel_id, "Unsure")}
+                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${row.statusData === 'Unsure' ? 'bg-orange-400 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                               >
                                 Unsure
                               </button>
                               <button 
-                                onClick={() => updateFeedback(row.parcel_id, "Incorrect")}
-                                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${row.feedback === 'Incorrect' ? 'bg-red-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                onClick={() => updateStatusData(row.parcel_id, "Incorrect")}
+                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${row.statusData === 'Incorrect' ? 'bg-red-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                               >
                                 Incorrect
+                              </button>
+                            </div>
+
+                            <label className="text-xs font-semibold text-slate-600 block mb-2">Prospect Status</label>
+                            <div className="flex gap-2 mb-4">
+                              <button 
+                                onClick={() => updateStatusProspect(row.parcel_id, "Interesting")}
+                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${row.statusProspect === 'Interesting' ? 'bg-bpi-navy-light text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                              >
+                                Interesting
+                              </button>
+                              <button 
+                                onClick={() => updateStatusProspect(row.parcel_id, "Not Interesting")}
+                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${row.statusProspect === 'Not Interesting' ? 'bg-slate-400 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                              >
+                                Not Interesting
                               </button>
                             </div>
                             
