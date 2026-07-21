@@ -25,6 +25,7 @@ type ParcelRow = {
   notes?: string;
   district?: string;
   metroDistance?: number;
+  geometry?: string;
 };
 
 
@@ -228,6 +229,17 @@ export default function ResultsList() {
     setExpandedRow(parcelId);
 
     if (!geomData[parcelId]) {
+      const row = data.find(r => r.parcel_id === parcelId);
+      if (row && row.geometry) {
+        try {
+          const parsedGeom = JSON.parse(row.geometry);
+          setGeomData((prev) => ({ ...prev, [parcelId]: parsedGeom }));
+          return;
+        } catch (e) {
+          console.error("Error parsing mock geometry", e);
+        }
+      }
+
       setGeomLoading(true);
       try {
         const res = await fetch(`/api/parcel-geom?parcel_id=${encodeURIComponent(parcelId)}`);
