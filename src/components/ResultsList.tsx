@@ -353,7 +353,7 @@ export default function ResultsList() {
       <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Batch Discovery Results</h2>
-          <p className="text-sm text-slate-500 mt-1">Current Demo Dataset: Białołęka District | Filtered for significant untapped potential.</p>
+          <p className="text-sm text-slate-500 mt-1">Current Demo Dataset: Client Target Districts (Sample) | Filtered for significant untapped potential.</p>
         </div>
         <button
           onClick={generateCSVFromState}
@@ -373,7 +373,7 @@ export default function ResultsList() {
       </div>
 
       <div className="p-4 bg-white border-b border-slate-100 flex flex-col sm:flex-row gap-4 items-center relative z-20">
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-[250px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input 
             type="text" 
@@ -384,7 +384,7 @@ export default function ResultsList() {
           />
         </div>
         
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1 sm:flex-initial">
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <SlidersHorizontal className="w-4 h-4 text-slate-400" />
             <span className="text-sm text-slate-600 font-medium whitespace-nowrap">
