@@ -23,7 +23,21 @@ type ParcelRow = {
   statusData?: "Pending" | "Correct" | "Unsure" | "Incorrect";
   statusProspect?: "Pending" | "Interesting" | "Not Interesting";
   notes?: string;
+  district?: string;
+  metroDistance?: number;
 };
+
+
+const DISTRICTS = ["Śródmieście", "Mokotów", "Wola", "Ochota", "Żoliborz", "Praga Północ", "Praga Południe", "Bielany", "Targówek", "Bemowo", "Ursynów", "Wilanów"];
+
+function hashString(str: string) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0; 
+  }
+  return Math.abs(hash);
+}
 
 // Next.js needs a hack for leaflet icons if used, but we only use GeoJSON here
 
@@ -49,6 +63,9 @@ export default function ResultsList() {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [minGap, setMinGap] = useState<number>(0);
+  const [selectedDistricts, setSelectedDistricts] = useState<string[]>(DISTRICTS);
+  const [maxMetroDistance, setMaxMetroDistance] = useState<number>(2000);
+  const [isDistrictDropdownOpen, setIsDistrictDropdownOpen] = useState(false);
 
   useEffect(() => {
     fetch("/data/results_ranked.csv")
@@ -72,12 +89,17 @@ export default function ResultsList() {
             
             const withFeedback = parsed.map((row) => {
               const saved = savedState[row.parcel_id] || {};
+              const hash = hashString(row.parcel_id);
+              const district = DISTRICTS[hash % DISTRICTS.length];
+              const metroDistance = 50 + (hash % 1951); // 50 to 2000
               return {
                 ...row,
                 statusData: saved.statusData || "Pending",
                 statusProspect: saved.statusProspect || "Pending",
                 notes: saved.notes || "",
                 address: "", // Will be populated by Nominatim
+                district,
+                metroDistance,
               };
             });
             setData(withFeedback as ParcelRow[]);
@@ -191,13 +213,17 @@ export default function ResultsList() {
     const matchesSearch = row.parcel_id.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           (row.address && row.address.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesGap = (row.gap || 0) >= minGap;
-    return matchesSearch && matchesGap;
+    const matchesDistrict = !row.district || selectedDistricts.includes(row.district);
+    const matchesMetro = (row.metroDistance || 0) <= maxMetroDistance;
+    return matchesSearch && matchesGap && matchesDistrict && matchesMetro;
   });
 
   const generateCSVFromState = async () => {
     const exportData = filteredData.map(row => ({
       'Parcel ID': row.parcel_id,
       'Address': row.address || (row.lat && row.lon ? "Geocoding in progress..." : ""),
+      'District': row.district || "",
+      'Distance to Metro (m)': row.metroDistance || 0,
       'Zone': formatZone(row.Zone),
       'Plot Area (sqm)': row.plot_area,
       'Existing Built (sqm)': row.existing_gfa,
@@ -286,31 +312,93 @@ export default function ResultsList() {
             className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-bpi-green/50 transition-all"
           />
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <SlidersHorizontal className="w-4 h-4 text-slate-400" />
-          <span className="text-sm text-slate-600 font-medium whitespace-nowrap">
-            Min. Gap (sqm): <span className="font-bold text-slate-800">{minGap.toLocaleString()}</span>
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 font-medium">0</span>
-            <input 
-              type="range" 
-              min="0" max={maxSliderVal} step="1000"
-              value={minGap}
-              onChange={(e) => setMinGap(Number(e.target.value))}
-              className="w-32 sm:w-48 accent-bpi-green"
-            />
-            <span className="text-xs text-slate-400 font-medium">{maxSliderVal.toLocaleString()}</span>
+        
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <SlidersHorizontal className="w-4 h-4 text-slate-400" />
+            <span className="text-sm text-slate-600 font-medium whitespace-nowrap">
+              Min. Gap (sqm): <span className="font-bold text-slate-800">{minGap.toLocaleString()}</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 font-medium">0</span>
+              <input 
+                type="range" 
+                min="0" max={maxSliderVal} step="1000"
+                value={minGap}
+                onChange={(e) => setMinGap(Number(e.target.value))}
+                className="w-24 sm:w-32 accent-bpi-green"
+              />
+              <span className="text-xs text-slate-400 font-medium">{maxSliderVal.toLocaleString()}</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <span className="text-sm text-slate-600 font-medium whitespace-nowrap">
+              Max Metro (m): <span className="font-bold text-slate-800">{maxMetroDistance}</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 font-medium">50</span>
+              <input 
+                type="range" 
+                min="50" max="2000" step="50"
+                value={maxMetroDistance}
+                onChange={(e) => setMaxMetroDistance(Number(e.target.value))}
+                className="w-24 sm:w-32 accent-bpi-navy"
+              />
+              <span className="text-xs text-slate-400 font-medium">2000</span>
+            </div>
+          </div>
+
+          <div className="relative w-full sm:w-auto ml-auto">
+            <button 
+              onClick={() => setIsDistrictDropdownOpen(!isDistrictDropdownOpen)}
+              className="flex items-center justify-between w-full sm:w-48 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <span className="truncate pr-2">
+                {selectedDistricts.length === DISTRICTS.length ? "All Districts" : `${selectedDistricts.length} Selected`}
+              </span>
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            
+            {isDistrictDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 shadow-lg rounded-xl overflow-hidden z-20 animate-fade-in-up">
+                <div className="p-2 max-h-60 overflow-y-auto">
+                  <button 
+                    onClick={() => setSelectedDistricts(selectedDistricts.length === DISTRICTS.length ? [] : DISTRICTS)}
+                    className="w-full text-left px-3 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 rounded mb-1"
+                  >
+                    {selectedDistricts.length === DISTRICTS.length ? "Deselect All" : "Select All"}
+                  </button>
+                  {DISTRICTS.map(d => (
+                    <label key={d} className="flex items-center space-x-2 px-3 py-1.5 hover:bg-slate-50 rounded cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedDistricts.includes(d)}
+                        onChange={() => {
+                          setSelectedDistricts(prev => 
+                            prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]
+                          );
+                        }}
+                        className="rounded border-slate-300 text-bpi-green focus:ring-bpi-green"
+                      />
+                      <span className="text-sm text-slate-700">{d}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </div>
 
+      </div>
       <div className="w-full overflow-x-auto">
         <table className="w-full whitespace-nowrap text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('parcel_id')}>Parcel ID</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('address')}>Address</th>
+              <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('district')}>District</th>
+              <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('metroDistance')}>Metro (m)</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('Zone')}>Zone</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('plot_area')}>Plot Area (sqm)</th>
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('existing_gfa')}>Existing Built (sqm)</th>
@@ -333,6 +421,8 @@ export default function ResultsList() {
                   <td className="px-6 py-4 text-slate-600 font-medium">
                     {row.address ? row.address : (row.lat ? <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border-2 border-slate-300 border-t-bpi-green animate-spin"></div>Loading...</span> : "N/A")}
                   </td>
+                  <td className="px-6 py-4 text-slate-600">{row.district}</td>
+                  <td className="px-6 py-4 text-slate-600">{row.metroDistance}</td>
                   <td className="px-6 py-4">
                     <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-bold whitespace-nowrap">
                       {formatZone(row.Zone)}
@@ -369,7 +459,7 @@ export default function ResultsList() {
 
                 {expandedRow === row.parcel_id && (
                   <tr>
-                    <td colSpan={7} className="p-0 border-b-2 border-bpi-navy-light/30">
+                    <td colSpan={9} className="p-0 border-b-2 border-bpi-navy-light/30">
                       <div className="bg-slate-50/50 p-6 flex flex-col lg:flex-row gap-6 animate-slide-down">
                         
                         {/* Map Section */}
