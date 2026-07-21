@@ -7,6 +7,7 @@ import "leaflet/dist/leaflet.css";
 
 import { MapContainer, TileLayer, GeoJSON, Marker, WMSTileLayer } from 'react-leaflet';
 import L from 'leaflet';
+import toast from 'react-hot-toast';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -134,12 +135,13 @@ export default function ResultsList() {
   const [geomData, setGeomData] = useState<{ [key: string]: any }>({});
   const [geomLoading, setGeomLoading] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showOwnershipLayer, setShowOwnershipLayer] = useState(false);
   
   const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    toast.error(msg, {
+      duration: 5000,
+      position: 'bottom-right',
+    });
   };
   
   const wmsErrorShownRef = useRef(false);
@@ -719,12 +721,6 @@ export default function ResultsList() {
           </tbody>
         </table>
       </div>
-      
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 bg-slate-800 text-white px-6 py-3 rounded-xl shadow-lg font-medium text-sm z-50 animate-in slide-in-from-bottom-5">
-          {toastMessage}
-        </div>
-      )}
     </div>
   );
 }
