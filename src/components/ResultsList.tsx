@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
-import { Check, ChevronDown, ChevronUp, Download, Search, SlidersHorizontal } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Download, Search, SlidersHorizontal, AlertTriangle } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
 import { MapContainer, TileLayer, GeoJSON, Marker, WMSTileLayer } from 'react-leaflet';
@@ -631,9 +631,15 @@ export default function ResultsList() {
                           )}
 
                           {wmsStatus === 'error' && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-white/40 z-[900] backdrop-blur-[1px]">
-                              <div className="bg-red-50 px-4 py-3 rounded-lg shadow-lg border border-red-200 flex items-center gap-3 max-w-sm text-center">
-                                <span className="text-sm font-semibold text-red-700">Warsaw Municipal Server is currently unavailable. Cannot load ownership overlay.</span>
+                            <div className="absolute inset-0 flex items-center justify-center bg-white/30 z-[900] backdrop-blur-[2px]">
+                              <div className="bg-white px-5 py-4 rounded-xl shadow-2xl border border-red-100 flex flex-col items-center gap-2 max-w-[280px] text-center">
+                                <div className="bg-red-50 p-2 rounded-full mb-1">
+                                  <AlertTriangle className="h-6 w-6 text-red-500" />
+                                </div>
+                                <h4 className="text-sm font-bold text-slate-800">Connection Timeout</h4>
+                                <span className="text-xs font-medium text-slate-500 leading-relaxed">
+                                  Warsaw Municipal Server is currently unavailable. Cannot load ownership overlay.
+                                </span>
                               </div>
                             </div>
                           )}
