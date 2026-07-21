@@ -277,7 +277,7 @@ export default function ResultsList() {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full min-w-max text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
               <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort('parcel_id')}>Parcel ID</th>
@@ -314,28 +314,24 @@ export default function ResultsList() {
                   <td className="px-6 py-4 text-slate-600">{row.allowed_gfa?.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
                   <td className="px-6 py-4 text-slate-600">{row.allowed_gfa ? ((row.existing_gfa || 0) / row.allowed_gfa * 100).toFixed(1) : 0}%</td>
                   <td className="px-6 py-4 font-bold text-bpi-green">{row.gap?.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
-                  <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                    <select 
-                      value={row.statusData || "Pending"} 
-                      onChange={(e) => updateStatusData(row.parcel_id, e.target.value as any)}
-                      className={`text-xs font-bold rounded px-2 py-1 outline-none cursor-pointer border-transparent focus:border-bpi-green focus:ring-1 focus:ring-bpi-green transition-all ${row.statusData === 'Correct' ? 'bg-bpi-green-light/20 text-bpi-green-dark' : row.statusData === 'Incorrect' ? 'bg-red-100 text-red-700' : row.statusData === 'Unsure' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-500'}`}
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="Correct">Correct</option>
-                      <option value="Unsure">Unsure</option>
-                      <option value="Incorrect">Incorrect</option>
-                    </select>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                      row.statusData === 'Correct' ? 'bg-bpi-green-light/20 text-bpi-green-dark' : 
+                      row.statusData === 'Incorrect' ? 'bg-red-100 text-red-700' : 
+                      row.statusData === 'Unsure' ? 'bg-orange-100 text-orange-700' : 
+                      'bg-slate-100 text-slate-500'
+                    }`}>
+                      {row.statusData || "Pending"}
+                    </span>
                   </td>
-                  <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                    <select 
-                      value={row.statusProspect || "Pending"} 
-                      onChange={(e) => updateStatusProspect(row.parcel_id, e.target.value as any)}
-                      className={`text-xs font-bold rounded px-2 py-1 outline-none cursor-pointer border-transparent focus:border-bpi-green focus:ring-1 focus:ring-bpi-green transition-all ${row.statusProspect === 'Interesting' ? 'bg-bpi-navy-light text-white' : row.statusProspect === 'Not Interesting' ? 'bg-slate-300 text-slate-700' : 'bg-slate-100 text-slate-500'}`}
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="Interesting">Interesting</option>
-                      <option value="Not Interesting">Not Interesting</option>
-                    </select>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                      row.statusProspect === 'Interesting' ? 'bg-bpi-navy-light text-white shadow-sm' : 
+                      row.statusProspect === 'Not Interesting' ? 'bg-slate-300 text-slate-700' : 
+                      'bg-slate-100 text-slate-500'
+                    }`}>
+                      {row.statusProspect || "Pending"}
+                    </span>
                   </td>
                   <td className="px-6 py-4 text-slate-400">
                     {expandedRow === row.parcel_id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
