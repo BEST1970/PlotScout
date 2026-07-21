@@ -5,7 +5,7 @@ import Papa from "papaparse";
 import { Check, ChevronDown, ChevronUp, Download, Search, SlidersHorizontal } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
-import { MapContainer, TileLayer, GeoJSON, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Marker, WMSTileLayer } from 'react-leaflet';
 import L from 'leaflet';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -135,6 +135,7 @@ export default function ResultsList() {
   const [geomLoading, setGeomLoading] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showOwnershipLayer, setShowOwnershipLayer] = useState(false);
   
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -573,6 +574,18 @@ export default function ResultsList() {
                         
                         {/* Map Section */}
                         <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden min-h-[300px] relative z-0">
+                          <div className="absolute top-2 right-2 z-[1000] bg-white p-2 rounded shadow-md border border-slate-200">
+                            <label className="flex items-center space-x-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={showOwnershipLayer}
+                                onChange={(e) => setShowOwnershipLayer(e.target.checked)}
+                                className="rounded text-bpi-navy focus:ring-bpi-navy"
+                              />
+                              <span>Struktura Własności</span>
+                            </label>
+                          </div>
+                          
                           {geomLoading && <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-bpi-green"></div></div>}
                           {!geomLoading && (!geomData[row.parcel_id] || !geomData[row.parcel_id].coordinates) && (
                             <div className="absolute inset-0 flex items-center justify-center bg-slate-50 text-slate-500 font-medium z-0">
@@ -589,6 +602,15 @@ export default function ResultsList() {
                               <TileLayer
                                 url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                               />
+                              {showOwnershipLayer && (
+                                <WMSTileLayer
+                                  url="https://wms.um.warszawa.pl/serwis"
+                                  layers="Struktura_wlasnosci"
+                                  format="image/png"
+                                  transparent={true}
+                                  opacity={0.8}
+                                />
+                              )}
                               <Marker position={[row.lat, row.lon]} />
                             </MapContainer>
                           ) : geomData[row.parcel_id] && geomData[row.parcel_id].coordinates && (
@@ -600,6 +622,15 @@ export default function ResultsList() {
                               <TileLayer
                                 url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                               />
+                              {showOwnershipLayer && (
+                                <WMSTileLayer
+                                  url="https://wms.um.warszawa.pl/serwis"
+                                  layers="Struktura_wlasnosci"
+                                  format="image/png"
+                                  transparent={true}
+                                  opacity={0.8}
+                                />
+                              )}
                               <GeoJSON 
                                 data={geomData[row.parcel_id]} 
                                 style={{ color: '#147e34', weight: 2, fillColor: '#50ad30', fillOpacity: 0.3 }} 
