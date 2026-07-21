@@ -632,14 +632,14 @@ export default function ResultsList() {
 
                           {wmsStatus === 'error' && (
                             <div className="absolute inset-0 flex items-center justify-center bg-white/30 z-[900] backdrop-blur-[2px]">
-                              <div className="bg-white px-5 py-4 rounded-xl shadow-2xl border border-red-100 flex flex-col items-center gap-2 max-w-[280px] text-center">
-                                <div className="bg-red-50 p-2 rounded-full mb-1">
+                              <div className="bg-white px-6 py-5 rounded-xl shadow-2xl border border-red-100 flex flex-col items-center gap-2 w-11/12 max-w-[320px] text-center">
+                                <div className="bg-red-50 p-2 rounded-full mb-1 flex-shrink-0">
                                   <AlertTriangle className="h-6 w-6 text-red-500" />
                                 </div>
                                 <h4 className="text-sm font-bold text-slate-800">Connection Timeout</h4>
-                                <span className="text-xs font-medium text-slate-500 leading-relaxed">
+                                <p className="text-xs font-medium text-slate-500 leading-relaxed w-full whitespace-normal break-words">
                                   Warsaw Municipal Server is currently unavailable. Cannot load ownership overlay.
-                                </span>
+                                </p>
                               </div>
                             </div>
                           )}
