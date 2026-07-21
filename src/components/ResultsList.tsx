@@ -142,6 +142,20 @@ export default function ResultsList() {
     setTimeout(() => setToastMessage(null), 3000);
   };
   
+  const wmsErrorShownRef = useRef(false);
+
+  const handleWmsError = (error: any) => {
+    console.error("WMS Tile Error loading Ownership Layer:", error);
+    if (!wmsErrorShownRef.current) {
+      wmsErrorShownRef.current = true;
+      showToast('Warsaw Municipal Server is currently unavailable or timing out. Cannot load ownership overlay.');
+      // Reset the flag after 10 seconds to avoid spamming if they keep toggling
+      setTimeout(() => {
+        wmsErrorShownRef.current = false;
+      }, 10000);
+    }
+  };
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [minGap, setMinGap] = useState<number>(0);
   const [availableDistricts, setAvailableDistricts] = useState<string[]>(DISTRICTS);
@@ -610,11 +624,7 @@ export default function ResultsList() {
                                   transparent={true}
                                   opacity={0.8}
                                   crs={L.CRS.EPSG4326}
-                                  eventHandlers={{
-                                    tileerror: (error) => {
-                                      console.error("WMS Tile Error loading Ownership Layer:", error);
-                                    }
-                                  }}
+                                  eventHandlers={{ tileerror: handleWmsError }}
                                 />
                               )}
                               <Marker position={[row.lat, row.lon]} />
@@ -636,11 +646,7 @@ export default function ResultsList() {
                                   transparent={true}
                                   opacity={0.8}
                                   crs={L.CRS.EPSG4326}
-                                  eventHandlers={{
-                                    tileerror: (error) => {
-                                      console.error("WMS Tile Error loading Ownership Layer:", error);
-                                    }
-                                  }}
+                                  eventHandlers={{ tileerror: handleWmsError }}
                                 />
                               )}
                               <GeoJSON 
