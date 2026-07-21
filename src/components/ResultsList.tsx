@@ -57,6 +57,64 @@ let globalSearchQuery: string = "";
 let globalMinGap: number = 0;
 let globalMaxMetroDistance: number = 15000;
 
+type Listener = (data: ParcelRow[], availDistricts: string[], selDistricts: string[]) => void;
+let listeners: Listener[] = [];
+
+export const subscribeToData = (listener: Listener) => {
+  listeners.push(listener);
+  return () => { listeners = listeners.filter(l => l !== listener); };
+};
+
+const notifyListeners = () => {
+  listeners.forEach(l => l(globalCachedData || [], globalAvailableDistricts || DISTRICTS, globalSelectedDistricts || DISTRICTS));
+};
+
+let isGeocodingStarted = false;
+
+async function startBackgroundGeocoding(initialData: ParcelRow[]) {
+  if (isGeocodingStarted) return;
+  isGeocodingStarted = true;
+  
+  let currentData = [...initialData];
+  const rowsToProcess = currentData.filter(r => !r.address && r.lat && r.lon);
+  
+  const batchSize = 3;
+  for (let i = 0; i < rowsToProcess.length; i += batchSize) {
+    const batch = rowsToProcess.slice(i, i + batchSize);
+    
+    await Promise.allSettled(batch.map(async (row) => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${row.lat}&lon=${row.lon}`);
+        const json = await res.json();
+        const address = json.address?.road ? `${json.address.road} ${json.address.house_number || ''}`.trim() : (json.display_name?.split(',')[0] || "Unknown");
+        const district = json.address?.city_district || json.address?.borough || json.address?.suburb || json.address?.quarter || "Unknown";
+        
+        const index = currentData.findIndex(r => r.parcel_id === row.parcel_id);
+        if (index !== -1) {
+          currentData[index] = { ...currentData[index], address, district };
+          globalCachedData = currentData;
+          
+          if (globalAvailableDistricts && !globalAvailableDistricts.includes(district) && district !== "Unknown") {
+             globalAvailableDistricts = [...globalAvailableDistricts, district].sort();
+             if (globalSelectedDistricts) globalSelectedDistricts = [...globalSelectedDistricts, district];
+          }
+        }
+      } catch (e) {
+        console.error("Geocoding failed", e);
+        const index = currentData.findIndex(r => r.parcel_id === row.parcel_id);
+        if (index !== -1) {
+           currentData[index] = { ...currentData[index], address: "Error", district: "Unknown" };
+           globalCachedData = currentData;
+        }
+      }
+    }));
+    
+    notifyListeners();
+    // Wait 2 seconds before next batch
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+}
+
 
 
 
@@ -257,58 +315,28 @@ export default function ResultsList() {
             });
             const initialData = withFeedback as ParcelRow[];
             globalCachedData = initialData;
+            globalAvailableDistricts = DISTRICTS;
+            globalSelectedDistricts = DISTRICTS;
             setData(initialData);
+            
+            // Kick off background geocoding eagerly
+            startBackgroundGeocoding(initialData);
           },
         });
       });
   }, []);
 
-  // Rate-limited Reverse Geocoding queue
+  // Subscribe to global data updates
   useEffect(() => {
-    const rowsToGeocode = data.filter(r => !r.address && r.lat && r.lon);
-    if (rowsToGeocode.length === 0) return;
+    const unsub = subscribeToData((newData, newAvail, newSel) => {
+      setData([...newData]);
+      setAvailableDistricts([...newAvail]);
+      setSelectedDistricts([...newSel]);
+    });
+    return unsub;
+  }, []);
 
-    const row = rowsToGeocode[0];
-    
-    const geocode = async () => {
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${row.lat}&lon=${row.lon}`);
-        const json = await res.json();
-        const address = json.address?.road ? `${json.address.road} ${json.address.house_number || ''}`.trim() : (json.display_name?.split(',')[0] || "Unknown");
-        const district = json.address?.city_district || json.address?.borough || json.address?.suburb || json.address?.quarter || "Unknown";
-        
-        setData(prev => {
-          const newData = prev.map(r => r.parcel_id === row.parcel_id ? { ...r, address, district } : r);
-          globalCachedData = newData;
-          return newData;
-        });
-        
-        setAvailableDistricts(prev => {
-          if (!prev.includes(district) && district !== "Unknown") {
-            setSelectedDistricts(selPrev => {
-              const newSel = [...selPrev, district];
-              globalSelectedDistricts = newSel;
-              return newSel;
-            });
-            const newAvail = [...prev, district].sort();
-            globalAvailableDistricts = newAvail;
-            return newAvail;
-          }
-          return prev;
-        });
-      } catch (e) {
-        console.error("Geocoding failed for row", row.parcel_id, e);
-        setData(prev => {
-          const newData = prev.map(r => r.parcel_id === row.parcel_id ? { ...r, address: "Error", district: "Unknown" } : r);
-          globalCachedData = newData;
-          return newData;
-        });
-      }
-    };
 
-    const timer = setTimeout(geocode, 1500); // 1.5s delay to strictly respect Nominatim's 1 req/sec policy
-    return () => clearTimeout(timer);
-  }, [data]);
 
   const handleSort = (key: keyof ParcelRow) => {
     let direction: 'asc' | 'desc' = 'asc';
