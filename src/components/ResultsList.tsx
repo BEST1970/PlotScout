@@ -30,14 +30,76 @@ type ParcelRow = {
 
 const DISTRICTS = ["Śródmieście", "Mokotów", "Wola", "Ochota", "Żoliborz", "Praga Północ", "Praga Południe", "Bielany", "Targówek", "Bemowo", "Ursynów", "Wilanów"];
 
-function hashString(str: string) {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0; 
-  }
-  return Math.abs(hash);
+
+const METRO_STATIONS = [
+  { name: 'Kabaty', lat: 52.131, lon: 21.065 },
+  { name: 'Natolin', lat: 52.139, lon: 21.055 },
+  { name: 'Imielin', lat: 52.149, lon: 21.045 },
+  { name: 'Stokłosy', lat: 52.158, lon: 21.033 },
+  { name: 'Ursynów', lat: 52.162, lon: 21.027 },
+  { name: 'Służew', lat: 52.173, lon: 21.022 },
+  { name: 'Wilanowska', lat: 52.181, lon: 21.022 },
+  { name: 'Wierzbno', lat: 52.190, lon: 21.018 },
+  { name: 'Racławicka', lat: 52.199, lon: 21.013 },
+  { name: 'Pole Mokotowskie', lat: 52.208, lon: 21.008 },
+  { name: 'Politechnika', lat: 52.219, lon: 21.015 },
+  { name: 'Centrum', lat: 52.230, lon: 21.010 },
+  { name: 'Świętokrzyska', lat: 52.235, lon: 21.008 },
+  { name: 'Ratusz Arsenał', lat: 52.243, lon: 21.000 },
+  { name: 'Dworzec Gdański', lat: 52.257, lon: 20.993 },
+  { name: 'Plac Wilsona', lat: 52.268, lon: 20.985 },
+  { name: 'Marymont', lat: 52.271, lon: 20.970 },
+  { name: 'Słodowiec', lat: 52.276, lon: 20.960 },
+  { name: 'Stare Bielany', lat: 52.281, lon: 20.949 },
+  { name: 'Wawrzyszew', lat: 52.287, lon: 20.938 },
+  { name: 'Młociny', lat: 52.291, lon: 20.929 },
+  { name: 'Bemowo', lat: 52.238, lon: 20.912 },
+  { name: 'Ulrychów', lat: 52.238, lon: 20.929 },
+  { name: 'Księcia Janusza', lat: 52.238, lon: 20.944 },
+  { name: 'Młynów', lat: 52.238, lon: 20.963 },
+  { name: 'Płocka', lat: 52.232, lon: 20.967 },
+  { name: 'Rondo Daszyńskiego', lat: 52.229, lon: 20.983 },
+  { name: 'Rondo ONZ', lat: 52.233, lon: 21.000 },
+  { name: 'Nowy Świat-Uniwersytet', lat: 52.236, lon: 21.018 },
+  { name: 'Centrum Nauki Kopernik', lat: 52.240, lon: 21.031 },
+  { name: 'Stadion Narodowy', lat: 52.247, lon: 21.042 },
+  { name: 'Dworzec Wileński', lat: 52.254, lon: 21.035 },
+  { name: 'Szwedzka', lat: 52.263, lon: 21.043 },
+  { name: 'Targówek Mieszkaniowy', lat: 52.269, lon: 21.053 },
+  { name: 'Trocka', lat: 52.274, lon: 21.055 },
+  { name: 'Zacisze', lat: 52.282, lon: 21.048 },
+  { name: 'Kondratowicza', lat: 52.291, lon: 21.048 },
+  { name: 'Bródno', lat: 52.293, lon: 21.033 }
+];
+
+function getDistanceFromLatLonInM(lat1: number, lon1: number, lat2: number, lon2: number) {
+  var R = 6371000; // Radius of the earth in m
+  var dLat = deg2rad(lat2-lat1);  // deg2rad below
+  var dLon = deg2rad(lon2-lon1); 
+  var a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+    ; 
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  var d = R * c; // Distance in m
+  return Math.round(d);
 }
+
+function deg2rad(deg: number) {
+  return deg * (Math.PI/180);
+}
+
+function getNearestMetroDistance(lat: number | undefined, lon: number | undefined) {
+  if (!lat || !lon) return 99999;
+  let min = 99999;
+  for (let st of METRO_STATIONS) {
+    let dist = getDistanceFromLatLonInM(lat, lon, st.lat, st.lon);
+    if (dist < min) min = dist;
+  }
+  return min;
+}
+
 
 // Next.js needs a hack for leaflet icons if used, but we only use GeoJSON here
 
@@ -89,9 +151,8 @@ export default function ResultsList() {
             
             const withFeedback = parsed.map((row) => {
               const saved = savedState[row.parcel_id] || {};
-              const hash = hashString(row.parcel_id);
-              const district = DISTRICTS[hash % DISTRICTS.length];
-              const metroDistance = 50 + (hash % 1951); // 50 to 2000
+              const metroDistance = getNearestMetroDistance(row.lat, row.lon);
+              const district = "";
               return {
                 ...row,
                 statusData: saved.statusData || "Pending",
@@ -120,8 +181,9 @@ export default function ResultsList() {
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${row.lat}&lon=${row.lon}`);
         const json = await res.json();
         const address = json.address?.road ? `${json.address.road} ${json.address.house_number || ''}`.trim() : (json.display_name?.split(',')[0] || "Unknown");
+        const district = json.address?.city_district || json.address?.borough || json.address?.suburb || json.address?.quarter || "Unknown";
         
-        setData(prev => prev.map(r => r.parcel_id === row.parcel_id ? { ...r, address } : r));
+        setData(prev => prev.map(r => r.parcel_id === row.parcel_id ? { ...r, address, district } : r));
       } catch (e) {
         console.error("Geocoding failed", e);
         setData(prev => prev.map(r => r.parcel_id === row.parcel_id ? { ...r, address: "Unavailable" } : r));
