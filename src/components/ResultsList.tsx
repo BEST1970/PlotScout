@@ -125,6 +125,7 @@ export default function ResultsList() {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [minGap, setMinGap] = useState<number>(0);
+  const [availableDistricts, setAvailableDistricts] = useState<string[]>(DISTRICTS);
   const [selectedDistricts, setSelectedDistricts] = useState<string[]>(DISTRICTS);
   const [maxMetroDistance, setMaxMetroDistance] = useState<number>(15000);
   const [isDistrictDropdownOpen, setIsDistrictDropdownOpen] = useState(false);
@@ -184,6 +185,14 @@ export default function ResultsList() {
         const district = json.address?.city_district || json.address?.borough || json.address?.suburb || json.address?.quarter || "Unknown";
         
         setData(prev => prev.map(r => r.parcel_id === row.parcel_id ? { ...r, address, district } : r));
+        
+        setAvailableDistricts(prev => {
+          if (!prev.includes(district) && district !== "Unknown") {
+            setSelectedDistricts(selPrev => [...selPrev, district]);
+            return [...prev, district].sort();
+          }
+          return prev;
+        });
       } catch (e) {
         console.error("Geocoding failed", e);
         setData(prev => prev.map(r => r.parcel_id === row.parcel_id ? { ...r, address: "Unavailable" } : r));
@@ -417,7 +426,7 @@ export default function ResultsList() {
               className="flex items-center justify-between w-full sm:w-48 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors"
             >
               <span className="truncate pr-2">
-                {selectedDistricts.length === DISTRICTS.length ? "All Districts" : `${selectedDistricts.length} Selected`}
+                {selectedDistricts.length === availableDistricts.length ? "All Districts" : `${selectedDistricts.length} Selected`}
               </span>
               <ChevronDown className="w-4 h-4" />
             </button>
@@ -426,12 +435,12 @@ export default function ResultsList() {
               <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 shadow-lg rounded-xl overflow-hidden z-20 animate-fade-in-up">
                 <div className="p-2 max-h-60 overflow-y-auto">
                   <button 
-                    onClick={() => setSelectedDistricts(selectedDistricts.length === DISTRICTS.length ? [] : DISTRICTS)}
+                    onClick={() => setSelectedDistricts(selectedDistricts.length === availableDistricts.length ? [] : availableDistricts)}
                     className="w-full text-left px-3 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 rounded mb-1"
                   >
-                    {selectedDistricts.length === DISTRICTS.length ? "Deselect All" : "Select All"}
+                    {selectedDistricts.length === availableDistricts.length ? "Deselect All" : "Select All"}
                   </button>
-                  {DISTRICTS.map(d => (
+                  {availableDistricts.map(d => (
                     <label key={d} className="flex items-center space-x-2 px-3 py-1.5 hover:bg-slate-50 rounded cursor-pointer">
                       <input 
                         type="checkbox" 
