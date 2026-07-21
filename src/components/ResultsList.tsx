@@ -5,8 +5,19 @@ import Papa from "papaparse";
 import { Check, ChevronDown, ChevronUp, Download, Search, SlidersHorizontal } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
-import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Marker } from 'react-leaflet';
 import L from 'leaflet';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+// Fix for default Leaflet marker icons
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon.src,
+  iconRetinaUrl: markerIcon2x.src,
+  shadowUrl: markerShadow.src,
+});
 
 type ParcelRow = {
   parcel_id: string;
@@ -123,6 +134,12 @@ export default function ResultsList() {
   const [geomData, setGeomData] = useState<{ [key: string]: any }>({});
   const [geomLoading, setGeomLoading] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
   
   const [searchQuery, setSearchQuery] = useState("");
   const [minGap, setMinGap] = useState<number>(0);
@@ -230,25 +247,34 @@ export default function ResultsList() {
 
     if (!geomData[parcelId]) {
       const row = data.find(r => r.parcel_id === parcelId);
-      if (row && row.geometry) {
-        try {
-          const parsedGeom = JSON.parse(row.geometry);
-          setGeomData((prev) => ({ ...prev, [parcelId]: parsedGeom }));
-          return;
-        } catch (e) {
-          console.error("Error parsing mock geometry", e);
-        }
-      }
-
       setGeomLoading(true);
       try {
-        const res = await fetch(`/api/parcel-geom?parcel_id=${encodeURIComponent(parcelId)}`);
+        const queryParams = new URLSearchParams({ parcel_id: parcelId });
+        if (row && row.lat && row.lon) {
+          queryParams.append('lat', row.lat.toString());
+          queryParams.append('lon', row.lon.toString());
+        }
+        
+        const res = await fetch(`/api/parcel-geom?${queryParams.toString()}`);
+        if (!res.ok) {
+           if (res.status === 404) {
+              setGeomData((prev) => ({ ...prev, [parcelId]: { isFallback: true, lat: row?.lat, lon: row?.lon } }));
+              showToast('Exact boundaries unavailable for this point');
+           }
+           return;
+        }
+        
         const result = await res.json();
         if (result && result.coordinates) {
           setGeomData((prev) => ({ ...prev, [parcelId]: result }));
+        } else if (result && result.error) {
+           setGeomData((prev) => ({ ...prev, [parcelId]: { isFallback: true, lat: row?.lat, lon: row?.lon } }));
+           showToast('Exact boundaries unavailable for this point');
         }
       } catch (e) {
         console.error("Error fetching geom:", e);
+        setGeomData((prev) => ({ ...prev, [parcelId]: { isFallback: true, lat: row?.lat, lon: row?.lon } }));
+        showToast('Exact boundaries unavailable for this point');
       } finally {
         setGeomLoading(false);
       }
@@ -553,7 +579,19 @@ export default function ResultsList() {
                               Geometry currently unavailable
                             </div>
                           )}
-                          {geomData[row.parcel_id] && geomData[row.parcel_id].coordinates && (
+                          {geomData[row.parcel_id] && geomData[row.parcel_id].isFallback && row.lat && row.lon ? (
+                            <MapContainer
+                              center={[row.lat, row.lon]}
+                              zoom={15}
+                              style={{ height: '300px', width: '100%' }}
+                              zoomControl={false}
+                            >
+                              <TileLayer
+                                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                              />
+                              <Marker position={[row.lat, row.lon]} />
+                            </MapContainer>
+                          ) : geomData[row.parcel_id] && geomData[row.parcel_id].coordinates && (
                             <MapContainer
                               bounds={L.geoJSON(geomData[row.parcel_id]).getBounds()}
                               style={{ height: '300px', width: '100%' }}
@@ -632,6 +670,12 @@ export default function ResultsList() {
           </tbody>
         </table>
       </div>
+      
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 bg-slate-800 text-white px-6 py-3 rounded-xl shadow-lg font-medium text-sm z-50 animate-in slide-in-from-bottom-5">
+          {toastMessage}
+        </div>
+      )}
     </div>
   );
 }

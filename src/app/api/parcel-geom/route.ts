@@ -14,18 +14,28 @@ function transformCoords(coords: any): any {
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   let parcel_id = searchParams.get('parcel_id');
+  const latStr = searchParams.get('lat');
+  const lonStr = searchParams.get('lon');
 
-  if (!parcel_id) {
-    return NextResponse.json({ error: 'Missing parcel_id' }, { status: 400 });
+  if (!parcel_id && (!latStr || !lonStr)) {
+    return NextResponse.json({ error: 'Missing parcel_id or lat/lon' }, { status: 400 });
   }
 
   // Strip 'dzialki.' prefix if present to satisfy the ULDK API
-  if (parcel_id.startsWith('dzialki.')) {
+  if (parcel_id && parcel_id.startsWith('dzialki.')) {
     parcel_id = parcel_id.replace('dzialki.', '');
   }
 
   try {
-    const url = `https://uldk.gugik.gov.pl/?request=GetParcelById&id=${parcel_id}&result=geom_wkt`;
+    let url = '';
+    
+    // If it's a mock parcel or we have explicit lat/lon, try spatial intersection
+    if ((parcel_id && parcel_id.includes('mock_') && latStr && lonStr) || (!parcel_id && latStr && lonStr)) {
+      url = `https://uldk.gugik.gov.pl/?request=GetParcelByXY&xy=${lonStr},${latStr},4326&result=geom_wkt`;
+    } else {
+      url = `https://uldk.gugik.gov.pl/?request=GetParcelById&id=${parcel_id}&result=geom_wkt`;
+    }
+    
     const res = await fetch(url);
     const text = await res.text();
     
@@ -44,7 +54,12 @@ export async function GET(req: Request) {
           (geojson as any).coordinates = transformCoords((geojson as any).coordinates);
           return NextResponse.json(geojson);
         }
+      } else {
+        // If it starts with '0' but doesn't have a second line, or has invalid data
+        return NextResponse.json({ error: 'No parcel found at this location' }, { status: 404 });
       }
+    } else if (text.startsWith('-1')) {
+      return NextResponse.json({ error: 'No parcel found at this location' }, { status: 404 });
     }
     
     return NextResponse.json({ error: 'Failed to fetch geometry' }, { status: 500 });
