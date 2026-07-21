@@ -136,6 +136,7 @@ export default function ResultsList() {
   const [geomLoading, setGeomLoading] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
   const [showOwnershipLayer, setShowOwnershipLayer] = useState(false);
+  const [wmsStatus, setWmsStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   
   const showToast = (msg: string) => {
     toast.error(msg, {
@@ -144,25 +145,18 @@ export default function ResultsList() {
     });
   };
   
-  const wmsErrorShownRef = useRef(false);
   const wmsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (showOwnershipLayer) {
+      setWmsStatus('loading');
       // Set a manual timeout. If tiles take longer than 8s, we assume it failed or timed out.
       wmsTimeoutRef.current = setTimeout(() => {
-        if (!wmsErrorShownRef.current) {
-          wmsErrorShownRef.current = true;
-          toast.error('Warsaw Municipal Server is currently unavailable. Cannot load ownership overlay.', {
-            duration: 6000,
-            position: 'bottom-right',
-            id: 'wms-timeout'
-          });
-        }
+        setWmsStatus('error');
       }, 8000);
     } else {
       if (wmsTimeoutRef.current) clearTimeout(wmsTimeoutRef.current);
-      wmsErrorShownRef.current = false;
+      setWmsStatus('idle');
     }
     return () => {
       if (wmsTimeoutRef.current) clearTimeout(wmsTimeoutRef.current);
@@ -171,14 +165,7 @@ export default function ResultsList() {
 
   const handleWmsError = (error: any) => {
     console.error("WMS Tile Error loading Ownership Layer:", error);
-    if (!wmsErrorShownRef.current) {
-      wmsErrorShownRef.current = true;
-      toast.error('Warsaw Municipal Server is currently unavailable. Cannot load ownership overlay.', {
-        duration: 6000,
-        position: 'bottom-right',
-        id: 'wms-timeout'
-      });
-    }
+    setWmsStatus('error');
   };
 
   const handleTileLoad = () => {
@@ -186,6 +173,8 @@ export default function ResultsList() {
       clearTimeout(wmsTimeoutRef.current);
       wmsTimeoutRef.current = null;
     }
+    // Only set to idle if it wasn't already marked as error (to avoid flickering)
+    setWmsStatus((prev) => (prev === 'error' ? 'error' : 'idle'));
   };
   
   const [searchQuery, setSearchQuery] = useState("");
@@ -632,6 +621,23 @@ export default function ResultsList() {
                             </label>
                           </div>
                           
+                          {wmsStatus === 'loading' && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-white/40 z-[900] backdrop-blur-[1px]">
+                              <div className="bg-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3">
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-bpi-green"></div>
+                                <span className="text-sm font-semibold text-slate-700">Loading ownership layer...</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {wmsStatus === 'error' && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-white/40 z-[900] backdrop-blur-[1px]">
+                              <div className="bg-red-50 px-4 py-3 rounded-lg shadow-lg border border-red-200 flex items-center gap-3 max-w-sm text-center">
+                                <span className="text-sm font-semibold text-red-700">Warsaw Municipal Server is currently unavailable. Cannot load ownership overlay.</span>
+                              </div>
+                            </div>
+                          )}
+
                           {geomLoading && <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-bpi-green"></div></div>}
                           {!geomLoading && (!geomData[row.parcel_id] || !geomData[row.parcel_id].coordinates) && (
                             <div className="absolute inset-0 flex items-center justify-center bg-slate-50 text-slate-500 font-medium z-0">
