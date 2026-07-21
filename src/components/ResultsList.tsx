@@ -43,6 +43,17 @@ type ParcelRow = {
 
 const DISTRICTS = ["Śródmieście", "Mokotów", "Wola", "Ochota", "Żoliborz", "Praga Północ", "Praga Południe", "Bielany", "Targówek", "Bemowo", "Ursynów", "Wilanów"];
 
+let globalCachedData: ParcelRow[] | null = null;
+let globalAvailableDistricts: string[] | null = null;
+let globalSelectedDistricts: string[] | null = null;
+let globalGeomData: { [key: string]: any } = {};
+let globalSortConfig: { key: keyof ParcelRow; direction: 'asc' | 'desc' } | null = null;
+let globalSearchQuery: string = "";
+let globalMinGap: number = 0;
+let globalMaxMetroDistance: number = 15000;
+
+
+
 
 const METRO_STATIONS = [
   { name: 'Kabaty', lat: 52.131, lon: 21.065 },
@@ -129,10 +140,10 @@ const formatZone = (zone: string) => {
 };
 
 export default function ResultsList() {
-  const [data, setData] = useState<ParcelRow[]>([]);
-  const [sortConfig, setSortConfig] = useState<{ key: keyof ParcelRow; direction: 'asc' | 'desc' } | null>(null);
+  const [data, setData] = useState<ParcelRow[]>(globalCachedData || []);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof ParcelRow; direction: 'asc' | 'desc' } | null>(globalSortConfig);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [geomData, setGeomData] = useState<{ [key: string]: any }>({});
+  const [geomData, setGeomData] = useState<{ [key: string]: any }>(globalGeomData);
   const [geomLoading, setGeomLoading] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
   const [showOwnershipLayer, setShowOwnershipLayer] = useState(false);
@@ -177,14 +188,24 @@ export default function ResultsList() {
     setWmsStatus((prev) => (prev === 'error' ? 'error' : 'idle'));
   };
   
-  const [searchQuery, setSearchQuery] = useState("");
-  const [minGap, setMinGap] = useState<number>(0);
-  const [availableDistricts, setAvailableDistricts] = useState<string[]>(DISTRICTS);
-  const [selectedDistricts, setSelectedDistricts] = useState<string[]>(DISTRICTS);
-  const [maxMetroDistance, setMaxMetroDistance] = useState<number>(15000);
+  const [searchQuery, setSearchQuery] = useState(globalSearchQuery);
+  const [minGap, setMinGap] = useState<number>(globalMinGap);
+  const [availableDistricts, setAvailableDistricts] = useState<string[]>(globalAvailableDistricts || DISTRICTS);
+  const [selectedDistricts, setSelectedDistricts] = useState<string[]>(globalSelectedDistricts || DISTRICTS);
+  const [maxMetroDistance, setMaxMetroDistance] = useState<number>(globalMaxMetroDistance);
   const [isDistrictDropdownOpen, setIsDistrictDropdownOpen] = useState(false);
 
+  // Sync filters to global cache whenever they change
+  useEffect(() => { globalSearchQuery = searchQuery; }, [searchQuery]);
+  useEffect(() => { globalMinGap = minGap; }, [minGap]);
+  useEffect(() => { globalMaxMetroDistance = maxMetroDistance; }, [maxMetroDistance]);
+  useEffect(() => { globalSortConfig = sortConfig; }, [sortConfig]);
+  useEffect(() => { globalGeomData = geomData; }, [geomData]);
+
+
   useEffect(() => {
+    if (globalCachedData) return;
+
     fetch("/data/results_ranked.csv")
       .then((response) => response.text())
       .then((csv) => {
@@ -218,7 +239,9 @@ export default function ResultsList() {
                 metroDistance,
               };
             });
-            setData(withFeedback as ParcelRow[]);
+            const initialData = withFeedback as ParcelRow[];
+            globalCachedData = initialData;
+            setData(initialData);
           },
         });
       });
@@ -238,18 +261,32 @@ export default function ResultsList() {
         const address = json.address?.road ? `${json.address.road} ${json.address.house_number || ''}`.trim() : (json.display_name?.split(',')[0] || "Unknown");
         const district = json.address?.city_district || json.address?.borough || json.address?.suburb || json.address?.quarter || "Unknown";
         
-        setData(prev => prev.map(r => r.parcel_id === row.parcel_id ? { ...r, address, district } : r));
+        setData(prev => {
+          const newData = prev.map(r => r.parcel_id === row.parcel_id ? { ...r, address, district } : r);
+          globalCachedData = newData;
+          return newData;
+        });
         
         setAvailableDistricts(prev => {
           if (!prev.includes(district) && district !== "Unknown") {
-            setSelectedDistricts(selPrev => [...selPrev, district]);
-            return [...prev, district].sort();
+            setSelectedDistricts(selPrev => {
+              const newSel = [...selPrev, district];
+              globalSelectedDistricts = newSel;
+              return newSel;
+            });
+            const newAvail = [...prev, district].sort();
+            globalAvailableDistricts = newAvail;
+            return newAvail;
           }
           return prev;
         });
       } catch (e) {
-        console.error("Geocoding failed", e);
-        setData(prev => prev.map(r => r.parcel_id === row.parcel_id ? { ...r, address: "Unavailable" } : r));
+        console.error("Geocoding failed for row", row.parcel_id, e);
+        setData(prev => {
+          const newData = prev.map(r => r.parcel_id === row.parcel_id ? { ...r, address: "Error", district: "Unknown" } : r);
+          globalCachedData = newData;
+          return newData;
+        });
       }
     };
 
