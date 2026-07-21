@@ -43,6 +43,11 @@ type ParcelRow = {
 
 const DISTRICTS = ["Śródmieście", "Mokotów", "Wola", "Ochota", "Żoliborz", "Praga Północ", "Praga Południe", "Bielany", "Targówek", "Bemowo", "Ursynów", "Wilanów"];
 
+const WMS_ENDPOINTS = [
+  "https://wms.um.warszawa.pl/serwis",
+  "https://wms2.um.warszawa.pl/geoserver/wms"
+];
+
 let globalCachedData: ParcelRow[] | null = null;
 let globalAvailableDistricts: string[] | null = null;
 let globalSelectedDistricts: string[] | null = null;
@@ -148,6 +153,7 @@ export default function ResultsList() {
   const [exportSuccess, setExportSuccess] = useState(false);
   const [showOwnershipLayer, setShowOwnershipLayer] = useState(false);
   const [wmsStatus, setWmsStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [activeWmsIndex, setActiveWmsIndex] = useState(0);
   
   const showToast = (msg: string) => {
     toast.error(msg, {
@@ -158,25 +164,35 @@ export default function ResultsList() {
   
   const wmsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const handleWmsFailure = () => {
+    if (activeWmsIndex < WMS_ENDPOINTS.length - 1) {
+      console.log(`WMS endpoint ${WMS_ENDPOINTS[activeWmsIndex]} failed, trying next...`);
+      setActiveWmsIndex(prev => prev + 1);
+    } else {
+      setWmsStatus('error');
+    }
+  };
+
   useEffect(() => {
     if (showOwnershipLayer) {
       setWmsStatus('loading');
       // Set a manual timeout. If tiles take longer than 8s, we assume it failed or timed out.
       wmsTimeoutRef.current = setTimeout(() => {
-        setWmsStatus('error');
+        handleWmsFailure();
       }, 8000);
     } else {
       if (wmsTimeoutRef.current) clearTimeout(wmsTimeoutRef.current);
       setWmsStatus('idle');
+      setActiveWmsIndex(0); // Reset for next time
     }
     return () => {
       if (wmsTimeoutRef.current) clearTimeout(wmsTimeoutRef.current);
     };
-  }, [showOwnershipLayer]);
+  }, [showOwnershipLayer, activeWmsIndex]);
 
   const handleWmsError = (error: any) => {
     console.error("WMS Tile Error loading Ownership Layer:", error);
-    setWmsStatus('error');
+    handleWmsFailure();
   };
 
   const handleTileLoad = () => {
@@ -699,7 +715,8 @@ export default function ResultsList() {
                               />
                               {showOwnershipLayer && (
                                 <WMSTileLayer
-                                  url="https://wms.um.warszawa.pl/serwis"
+                                  key={WMS_ENDPOINTS[activeWmsIndex]}
+                                  url={WMS_ENDPOINTS[activeWmsIndex]}
                                   layers="wlasnosc"
                                   format="image/png"
                                   transparent={true}
@@ -721,7 +738,8 @@ export default function ResultsList() {
                               />
                               {showOwnershipLayer && (
                                 <WMSTileLayer
-                                  url="https://wms.um.warszawa.pl/serwis"
+                                  key={WMS_ENDPOINTS[activeWmsIndex]}
+                                  url={WMS_ENDPOINTS[activeWmsIndex]}
                                   layers="wlasnosc"
                                   format="image/png"
                                   transparent={true}
