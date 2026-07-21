@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
-import { ChevronDown, ChevronUp, Download, Search, SlidersHorizontal } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Download, Search, SlidersHorizontal } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
@@ -45,6 +45,7 @@ export default function ResultsList() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [geomData, setGeomData] = useState<{ [key: string]: any }>({});
   const [geomLoading, setGeomLoading] = useState(false);
+  const [exportSuccess, setExportSuccess] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [minGap, setMinGap] = useState<number>(0);
@@ -193,7 +194,7 @@ export default function ResultsList() {
     return matchesSearch && matchesGap;
   });
 
-  const generateCSVFromState = () => {
+  const generateCSVFromState = async () => {
     const exportData = filteredData.map(row => ({
       'Parcel ID': row.parcel_id,
       'Address': row.address || "",
@@ -211,14 +212,40 @@ export default function ResultsList() {
     }));
     const csv = Papa.unparse(exportData);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", "reviewed_results.csv");
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    try {
+      // @ts-ignore
+      if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+        // @ts-ignore
+        const handle = await window.showSaveFilePicker({
+          suggestedName: 'reviewed_results.csv',
+          types: [{
+            description: 'CSV file',
+            accept: {'text/csv': ['.csv']},
+          }],
+        });
+        // @ts-ignore
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      } else {
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "reviewed_results.csv");
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      setExportSuccess(true);
+      setTimeout(() => setExportSuccess(false), 2500);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error("Export failed", err);
+      }
+    }
   };
 
   const maxSliderVal = data.length > 0 ? Math.ceil(Math.max(...data.map(d => d.gap || 0)) / 1000) * 1000 : 25000;
@@ -233,15 +260,17 @@ export default function ResultsList() {
         </div>
         <button
           onClick={generateCSVFromState}
-          className="flex items-center space-x-2 px-4 py-2 bg-bpi-navy text-white rounded-lg hover:bg-bpi-navy-light transition-colors shadow-sm"
+          className="flex items-center space-x-2 px-4 py-2 bg-bpi-navy text-white rounded-lg hover:bg-bpi-navy-light transition-colors shadow-sm min-w-[140px] justify-center"
         >
           {geocodingRemaining > 0 ? (
             <div className="w-4 h-4 rounded-full border-2 border-slate-300 border-t-white animate-spin"></div>
+          ) : exportSuccess ? (
+            <Check className="w-4 h-4 text-bpi-green" />
           ) : (
             <Download className="w-4 h-4" />
           )}
           <span className="font-medium text-sm">
-            {geocodingRemaining > 0 ? `Export CSV (${geocodingRemaining} left...)` : 'Export CSV'}
+            {geocodingRemaining > 0 ? `Export CSV (${geocodingRemaining} left...)` : exportSuccess ? 'Exported! ✅' : 'Export CSV'}
           </span>
         </button>
       </div>
