@@ -197,7 +197,7 @@ export default function ResultsList() {
   const generateCSVFromState = async () => {
     const exportData = filteredData.map(row => ({
       'Parcel ID': row.parcel_id,
-      'Address': row.address || "",
+      'Address': row.address || (row.lat && row.lon ? "Geocoding in progress..." : ""),
       'Zone': formatZone(row.Zone),
       'Plot Area (sqm)': row.plot_area,
       'Existing Built (sqm)': row.existing_gfa,
