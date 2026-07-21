@@ -8,7 +8,42 @@ import proj4 from "proj4";
 import { MapContainer, TileLayer, WMSTileLayer, useMapEvents, useMap, Marker } from 'react-leaflet';
 import L from 'leaflet';
 
+import { globalCachedData, ParcelRow, formatZone } from "./ResultsList";
+
 proj4.defs("EPSG:2180", "+proj=tmerc +lat_0=0 +lon_0=19 +k=0.9993 +x_0=500000 +y_0=-5300000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
+
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  var R = 6371000;
+  var dLat = (lat2-lat1) * (Math.PI/180);
+  var dLon = (lon2-lon1) * (Math.PI/180); 
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*(Math.PI/180)) * Math.cos(lat2*(Math.PI/180)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  return R * c;
+}
+
+function findMatchingParcel(lat: number, lng: number, addressSearch: string = ""): ParcelRow | null {
+  if (!globalCachedData) return null;
+  
+  if (addressSearch) {
+    const q = addressSearch.toLowerCase();
+    const match = globalCachedData.find(p => p.address && p.address.toLowerCase().includes(q));
+    if (match) return match;
+  }
+  
+  // Find closest by distance
+  let closest: ParcelRow | null = null;
+  let minD = 50; // Max 50 meters
+  for (const p of globalCachedData) {
+    if (p.lat && p.lon) {
+      const d = getDistance(lat, lng, p.lat, p.lon);
+      if (d < minD) {
+        minD = d;
+        closest = p;
+      }
+    }
+  }
+  return closest;
+}
 
 type ScoutResult = {
   parcel_id: string;
@@ -36,8 +71,25 @@ export default function ParcelExplorer() {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ', Warsaw')}`);
       const data = await res.json();
       if (data && data.length > 0) {
-        setSearchCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+        setSearchCoords([lat, lon]);
         setErrorMsg("");
+        
+        const mockMatch = findMatchingParcel(lat, lon, searchQuery);
+        if (mockMatch) {
+            setActiveParcel({
+              parcel_id: mockMatch.parcel_id,
+              zone: formatZone(mockMatch.Zone),
+              plot_area: mockMatch.plot_area,
+              existing_gfa: mockMatch.existing_gfa,
+              allowed_gfa: mockMatch.allowed_gfa,
+              gap: mockMatch.gap,
+              warning: null
+            });
+        } else {
+            setActiveParcel(null);
+        }
       } else {
         setErrorMsg("Address not found.");
       }
@@ -96,6 +148,21 @@ export default function ParcelExplorer() {
           const parcelId = lines[1];
           
           // Trigger local python pipeline via Next.js API
+          // But FIRST, check our local mock cache for the clicked coordinate
+          const mockMatch = findMatchingParcel(lat, lng);
+          if (mockMatch) {
+            setActiveParcel({
+              parcel_id: mockMatch.parcel_id,
+              zone: formatZone(mockMatch.Zone),
+              plot_area: mockMatch.plot_area,
+              existing_gfa: mockMatch.existing_gfa,
+              allowed_gfa: mockMatch.allowed_gfa,
+              gap: mockMatch.gap,
+              warning: null
+            });
+            return;
+          }
+
           const scoutRes = await fetch('/api/scout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

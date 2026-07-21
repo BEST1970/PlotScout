@@ -20,7 +20,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow.src,
 });
 
-type ParcelRow = {
+export type ParcelRow = {
   parcel_id: string;
   Zone: string;
   plot_area: number;
@@ -48,7 +48,7 @@ const WMS_ENDPOINTS = [
   "https://wms2.um.warszawa.pl/geoserver/wms"
 ];
 
-let globalCachedData: ParcelRow[] | null = null;
+export let globalCachedData: ParcelRow[] | null = null;
 let globalAvailableDistricts: string[] | null = null;
 let globalSelectedDistricts: string[] | null = null;
 let globalGeomData: { [key: string]: any } = {};
@@ -132,7 +132,7 @@ function getNearestMetroDistance(lat: number | undefined, lon: number | undefine
 
 // Next.js needs a hack for leaflet icons if used, but we only use GeoJSON here
 
-const formatZone = (zone: string) => {
+export const formatZone = (zone: string) => {
   if (!zone) return "Unknown";
   const upper = zone.toUpperCase();
   switch (upper) {
