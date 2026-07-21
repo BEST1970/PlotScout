@@ -605,10 +605,16 @@ export default function ResultsList() {
                               {showOwnershipLayer && (
                                 <WMSTileLayer
                                   url="https://wms.um.warszawa.pl/serwis"
-                                  layers="Struktura_wlasnosci"
+                                  layers="wlasnosc"
                                   format="image/png"
                                   transparent={true}
                                   opacity={0.8}
+                                  crs={L.CRS.EPSG4326}
+                                  eventHandlers={{
+                                    tileerror: (error) => {
+                                      console.error("WMS Tile Error loading Ownership Layer:", error);
+                                    }
+                                  }}
                                 />
                               )}
                               <Marker position={[row.lat, row.lon]} />
@@ -625,10 +631,16 @@ export default function ResultsList() {
                               {showOwnershipLayer && (
                                 <WMSTileLayer
                                   url="https://wms.um.warszawa.pl/serwis"
-                                  layers="Struktura_wlasnosci"
+                                  layers="wlasnosc"
                                   format="image/png"
                                   transparent={true}
                                   opacity={0.8}
+                                  crs={L.CRS.EPSG4326}
+                                  eventHandlers={{
+                                    tileerror: (error) => {
+                                      console.error("WMS Tile Error loading Ownership Layer:", error);
+                                    }
+                                  }}
                                 />
                               )}
                               <GeoJSON 
