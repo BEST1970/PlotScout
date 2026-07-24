@@ -5,8 +5,9 @@ import { Search, Loader2 } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import proj4 from "proj4";
 
-import { MapContainer, TileLayer, WMSTileLayer, useMapEvents, useMap, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, WMSTileLayer, useMapEvents, useMap, Marker, GeoJSON as ParcelBoundary } from 'react-leaflet';
 import L from 'leaflet';
+import type { Polygon as GeoJsonPolygon } from 'geojson';
 
 import { globalCachedData, ParcelRow, formatZone } from "./ResultsList";
 
@@ -53,6 +54,10 @@ type ScoutResult = {
   allowed_gfa: number | null;
   gap: number | null;
   warning: string | null;
+  address?: string | null;
+  district?: string | null;
+  existing_footprint?: number | null;
+  building_count?: number | null;
   error?: string;
 };
 
@@ -63,6 +68,7 @@ export default function ParcelExplorer() {
   const [errorMsg, setErrorMsg] = useState("");
   const [searchCoords, setSearchCoords] = useState<[number, number] | null>(null);
   const [selectedCoords, setSelectedCoords] = useState<[number, number] | null>(null);
+  const [selectedBoundary, setSelectedBoundary] = useState<GeoJsonPolygon | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,9 +149,9 @@ export default function ParcelExplorer() {
           }
           
           const parcelId = parcelData.parcel_id;
+          setSelectedBoundary(parcelData.boundary || null);
           
-          // Trigger local python pipeline via Next.js API
-          // But FIRST, check our local mock cache for the clicked coordinate
+          // Prefer reviewed seed data when the click matches one of its parcels.
           const mockMatch = findMatchingParcel(lat, lng);
           if (mockMatch) {
             setActiveParcel({
@@ -160,31 +166,19 @@ export default function ParcelExplorer() {
             return;
           }
 
-          const scoutRes = await fetch('/api/scout', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ parcel_id: parcelId })
+          setActiveParcel({
+            parcel_id: parcelId,
+            zone: parcelData.zone,
+            plot_area: parcelData.plot_area,
+            existing_gfa: parcelData.existing_gfa,
+            allowed_gfa: parcelData.allowed_gfa,
+            gap: parcelData.gap,
+            warning: parcelData.warning,
+            address: parcelData.address,
+            district: parcelData.district,
+            existing_footprint: parcelData.existing_footprint,
+            building_count: parcelData.building_count,
           });
-          
-          if (!scoutRes.ok) {
-            setActiveParcel({
-              parcel_id: parcelId,
-              zone: "Unavailable",
-              plot_area: parcelData.plot_area,
-              existing_gfa: null,
-              allowed_gfa: null,
-              gap: null,
-              warning: "Parcel area is calculated from the official cadastral geometry. Planning and building metrics are not available for this parcel yet."
-            });
-            return;
-          }
-
-          const scoutData = await scoutRes.json();
-          if (scoutData.error) {
-            throw new Error(scoutData.error);
-          }
-          
-          setActiveParcel(scoutData);
         } catch (err: any) {
           setErrorMsg(err.message || "An error occurred.");
         } finally {
@@ -213,7 +207,7 @@ export default function ParcelExplorer() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
           </form>
           <p className="text-xs text-slate-500 mt-4 leading-relaxed">
-            Click on any parcel on the map to instantly calculate its development potential using the local Python pipeline.
+            Click any parcel to load its official boundary and area, public building data, address, district, and estimated development potential.
           </p>
         </div>
 
@@ -221,7 +215,7 @@ export default function ParcelExplorer() {
           {loading && (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-4">
               <Loader2 className="w-8 h-8 animate-spin text-bpi-navy" />
-              <p className="text-sm font-medium">Running Python pipeline...</p>
+              <p className="text-sm font-medium">Analyzing parcel data...</p>
             </div>
           )}
 
@@ -237,6 +231,8 @@ export default function ParcelExplorer() {
               <div>
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Selected Parcel</h3>
                 <p className="text-sm font-semibold text-slate-800 break-all">{activeParcel.parcel_id}</p>
+                {activeParcel.address && <p className="mt-2 text-xs text-slate-600 leading-relaxed">{activeParcel.address}</p>}
+                {activeParcel.district && <p className="mt-1 text-xs font-semibold text-bpi-navy">{activeParcel.district}</p>}
               </div>
 
               {activeParcel.warning && (
@@ -260,6 +256,15 @@ export default function ParcelExplorer() {
               </div>
 
               <div className="space-y-3">
+                {activeParcel.existing_footprint !== undefined && (
+                  <div className="bg-white border border-slate-200 rounded-lg p-4 flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-500 uppercase">Building Footprint</span>
+                    <span className="text-sm font-bold text-slate-800">
+                      {activeParcel.existing_footprint === null ? "N/A" : `${activeParcel.existing_footprint.toLocaleString(undefined, { maximumFractionDigits: 0 })} sqm`}
+                      {activeParcel.building_count !== null && activeParcel.building_count !== undefined && <span className="block text-[10px] text-slate-400 text-right">{activeParcel.building_count} buildings</span>}
+                    </span>
+                  </div>
+                )}
                 <div className="bg-white border border-slate-200 rounded-lg p-4 flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-500 uppercase">Existing GFA</span>
                   <span className="text-sm font-bold text-slate-800">
@@ -311,6 +316,13 @@ export default function ParcelExplorer() {
             version="1.1.1"
           />
           <MapUpdater />
+          {selectedBoundary && (
+            <ParcelBoundary
+              key={JSON.stringify(selectedBoundary.coordinates[0][0])}
+              data={selectedBoundary}
+              style={{ color: '#1f6b4f', weight: 3, fillColor: '#53a318', fillOpacity: 0.2 }}
+            />
+          )}
           {(selectedCoords || searchCoords) && (
             <Marker position={selectedCoords || searchCoords!} icon={customIcon} />
           )}
