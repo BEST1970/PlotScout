@@ -62,6 +62,7 @@ export default function ParcelExplorer() {
   const [activeParcel, setActiveParcel] = useState<ScoutResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [searchCoords, setSearchCoords] = useState<[number, number] | null>(null);
+  const [selectedCoords, setSelectedCoords] = useState<[number, number] | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,22 +131,18 @@ export default function ParcelExplorer() {
         try {
           const lat = e.latlng.lat;
           const lng = e.latlng.lng;
+          setSelectedCoords([lat, lng]);
           
-          // Use proj4 to convert WGS84 to EPSG:2180
+          // ULDK uses Poland's EPSG:2180 coordinate system. Resolve it through
+          // our server route so browser CORS rules cannot block parcel clicks.
           const [x, y] = proj4("EPSG:4326", "EPSG:2180", [lng, lat]);
-          
-          // Intercept map click and resolve via ULDK API (GetParcelByXY) using converted coords
-          const uldkUrl = `https://uldk.gugik.gov.pl/?request=GetParcelByXY&xy=${x},${y},2180&result=id`;
-          
-          const uldkRes = await fetch(uldkUrl);
-          const uldkText = await uldkRes.text();
-          
-          const lines = uldkText.trim().split('\n');
-          if (lines[0] !== '0' || lines.length < 2) {
-            throw new Error("No parcel found at this location.");
+          const parcelRes = await fetch(`/api/parcel-at-point?x=${encodeURIComponent(x)}&y=${encodeURIComponent(y)}`);
+          const parcelData = await parcelRes.json();
+          if (!parcelRes.ok) {
+            throw new Error(parcelData.error || "No parcel found at this location.");
           }
           
-          const parcelId = lines[1];
+          const parcelId = parcelData.parcel_id;
           
           // Trigger local python pipeline via Next.js API
           // But FIRST, check our local mock cache for the clicked coordinate
@@ -306,7 +303,9 @@ export default function ParcelExplorer() {
             version="1.1.1"
           />
           <MapUpdater />
-          {searchCoords && <Marker position={searchCoords} icon={customIcon} />}
+          {(selectedCoords || searchCoords) && (
+            <Marker position={selectedCoords || searchCoords!} icon={customIcon} />
+          )}
           <MapClickHandler />
         </MapContainer>
       </div>
