@@ -32,10 +32,39 @@ export type ParcelRow = {
   lat?: number;
   lon?: number;
   address?: string;
+  // Flat fields are read from the manually enriched seed CSV.
+  nominatim_display_name?: string;
+  road?: string;
+  house_number?: string;
+  postcode?: string;
+  city?: string;
+  municipality?: string;
+  neighbourhood?: string;
+  state?: string;
+  country?: string;
+  osm_type?: string;
+  osm_id?: string | number;
+  nominatim_category?: string;
+  nominatim_type?: string;
   statusData?: "Pending" | "Correct" | "Unsure" | "Incorrect";
   statusProspect?: "Pending" | "Interesting" | "Not Interesting";
   notes?: string;
   district?: string;
+  nominatim?: {
+    displayName?: string;
+    road?: string;
+    houseNumber?: string;
+    postcode?: string;
+    city?: string;
+    municipality?: string;
+    neighbourhood?: string;
+    state?: string;
+    country?: string;
+    osmType?: string;
+    osmId?: string | number;
+    category?: string;
+    type?: string;
+  };
   metroDistance?: number;
   geometry?: string;
 };
@@ -88,10 +117,25 @@ async function startBackgroundGeocoding(initialData: ParcelRow[]) {
         const json = await res.json();
         const address = json.address?.road ? `${json.address.road} ${json.address.house_number || ''}`.trim() : (json.display_name?.split(',')[0] || "Unknown");
         const district = json.address?.city_district || json.address?.borough || json.address?.suburb || json.address?.quarter || "Unknown";
+        const nominatim = {
+          displayName: json.display_name,
+          road: json.address?.road,
+          houseNumber: json.address?.house_number,
+          postcode: json.address?.postcode,
+          city: json.address?.city || json.address?.town || json.address?.village,
+          municipality: json.address?.municipality,
+          neighbourhood: json.address?.neighbourhood || json.address?.suburb || json.address?.quarter,
+          state: json.address?.state,
+          country: json.address?.country,
+          osmType: json.osm_type,
+          osmId: json.osm_id,
+          category: json.category || json.class,
+          type: json.type,
+        };
         
         const index = currentData.findIndex(r => r.parcel_id === row.parcel_id);
         if (index !== -1) {
-          currentData[index] = { ...currentData[index], address, district };
+          currentData[index] = { ...currentData[index], address, district, nominatim };
           globalCachedData = currentData;
           
           if (globalAvailableDistricts && !globalAvailableDistricts.includes(district) && district !== "Unknown") {
@@ -302,14 +346,29 @@ export default function ResultsList() {
             const withFeedback = parsed.map((row) => {
               const saved = savedState[row.parcel_id] || {};
               const metroDistance = getNearestMetroDistance(row.lat, row.lon);
-              const district = "";
+              const nominatim = row.nominatim_display_name ? {
+                displayName: row.nominatim_display_name,
+                road: row.road,
+                houseNumber: row.house_number,
+                postcode: row.postcode,
+                city: row.city,
+                municipality: row.municipality,
+                neighbourhood: row.neighbourhood,
+                state: row.state,
+                country: row.country,
+                osmType: row.osm_type,
+                osmId: row.osm_id,
+                category: row.nominatim_category,
+                type: row.nominatim_type,
+              } : undefined;
               return {
                 ...row,
                 statusData: saved.statusData || "Pending",
                 statusProspect: saved.statusProspect || "Pending",
                 notes: saved.notes || "",
-                address: "", // Will be populated by Nominatim
-                district,
+                address: row.address || "",
+                district: row.district || "",
+                nominatim,
                 metroDistance,
               };
             });
@@ -448,7 +507,22 @@ export default function ResultsList() {
     const exportData = filteredData.map(row => ({
       'Parcel ID': row.parcel_id,
       'Address': row.address || (row.lat && row.lon ? "Geocoding in progress..." : ""),
+      'Nominatim Display Name': row.nominatim?.displayName || "",
+      'Road': row.nominatim?.road || "",
+      'House Number': row.nominatim?.houseNumber || "",
+      'Postcode': row.nominatim?.postcode || "",
+      'City': row.nominatim?.city || "",
       'District': row.district || "",
+      'Municipality': row.nominatim?.municipality || "",
+      'Neighbourhood': row.nominatim?.neighbourhood || "",
+      'State': row.nominatim?.state || "",
+      'Country': row.nominatim?.country || "",
+      'Latitude': row.lat || "",
+      'Longitude': row.lon || "",
+      'OSM Type': row.nominatim?.osmType || "",
+      'OSM ID': row.nominatim?.osmId || "",
+      'Nominatim Category': row.nominatim?.category || "",
+      'Nominatim Type': row.nominatim?.type || "",
       'Distance to Metro (m)': row.metroDistance || 0,
       'Zone': formatZone(row.Zone),
       'Plot Area (sqm)': row.plot_area,
