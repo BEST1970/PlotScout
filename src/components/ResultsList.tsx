@@ -743,8 +743,8 @@ export default function ResultsList() {
                               />
                               {showOwnershipLayer && (
                                 <WMSTileLayer
-                                  key={WMS_ENDPOINTS[activeWmsIndex]}
-                                  url={WMS_ENDPOINTS[activeWmsIndex]}
+                                  key="/api/wms"
+                                  url="/api/wms"
                                   layers="wlasnosc"
                                   format="image/png"
                                   transparent={true}
@@ -766,8 +766,8 @@ export default function ResultsList() {
                               />
                               {showOwnershipLayer && (
                                 <WMSTileLayer
-                                  key={WMS_ENDPOINTS[activeWmsIndex]}
-                                  url={WMS_ENDPOINTS[activeWmsIndex]}
+                                  key="/api/wms"
+                                  url="/api/wms"
                                   layers="wlasnosc"
                                   format="image/png"
                                   transparent={true}
