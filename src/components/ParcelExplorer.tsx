@@ -5,8 +5,9 @@ import { Search, Loader2 } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import proj4 from "proj4";
 
-import { MapContainer, TileLayer, WMSTileLayer, useMapEvents, useMap, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, WMSTileLayer, useMapEvents, useMap, Marker, GeoJSON as ParcelBoundary } from 'react-leaflet';
 import L from 'leaflet';
+import type { Polygon as GeoJsonPolygon } from 'geojson';
 
 import { globalCachedData, ParcelRow, formatZone } from "./ResultsList";
 
@@ -48,11 +49,15 @@ function findMatchingParcel(lat: number, lng: number, addressSearch: string = ""
 type ScoutResult = {
   parcel_id: string;
   zone: string;
-  plot_area: number;
-  existing_gfa: number;
-  allowed_gfa: number;
-  gap: number;
+  plot_area: number | null;
+  existing_gfa: number | null;
+  allowed_gfa: number | null;
+  gap: number | null;
   warning: string | null;
+  address?: string | null;
+  district?: string | null;
+  existing_footprint?: number | null;
+  building_count?: number | null;
   error?: string;
 };
 
@@ -62,6 +67,8 @@ export default function ParcelExplorer() {
   const [activeParcel, setActiveParcel] = useState<ScoutResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [searchCoords, setSearchCoords] = useState<[number, number] | null>(null);
+  const [selectedCoords, setSelectedCoords] = useState<[number, number] | null>(null);
+  const [selectedBoundary, setSelectedBoundary] = useState<GeoJsonPolygon | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,25 +137,21 @@ export default function ParcelExplorer() {
         try {
           const lat = e.latlng.lat;
           const lng = e.latlng.lng;
+          setSelectedCoords([lat, lng]);
           
-          // Use proj4 to convert WGS84 to EPSG:2180
+          // ULDK uses Poland's EPSG:2180 coordinate system. Resolve it through
+          // our server route so browser CORS rules cannot block parcel clicks.
           const [x, y] = proj4("EPSG:4326", "EPSG:2180", [lng, lat]);
-          
-          // Intercept map click and resolve via ULDK API (GetParcelByXY) using converted coords
-          const uldkUrl = `https://uldk.gugik.gov.pl/?request=GetParcelByXY&xy=${x},${y},2180&result=id`;
-          
-          const uldkRes = await fetch(uldkUrl);
-          const uldkText = await uldkRes.text();
-          
-          const lines = uldkText.trim().split('\n');
-          if (lines[0] !== '0' || lines.length < 2) {
-            throw new Error("No parcel found at this location.");
+          const parcelRes = await fetch(`/api/parcel-at-point?x=${encodeURIComponent(x)}&y=${encodeURIComponent(y)}`);
+          const parcelData = await parcelRes.json();
+          if (!parcelRes.ok) {
+            throw new Error(parcelData.error || "No parcel found at this location.");
           }
           
-          const parcelId = lines[1];
+          const parcelId = parcelData.parcel_id;
+          setSelectedBoundary(parcelData.boundary || null);
           
-          // Trigger local python pipeline via Next.js API
-          // But FIRST, check our local mock cache for the clicked coordinate
+          // Prefer reviewed seed data when the click matches one of its parcels.
           const mockMatch = findMatchingParcel(lat, lng);
           if (mockMatch) {
             setActiveParcel({
@@ -163,31 +166,19 @@ export default function ParcelExplorer() {
             return;
           }
 
-          const scoutRes = await fetch('/api/scout', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ parcel_id: parcelId })
+          setActiveParcel({
+            parcel_id: parcelId,
+            zone: parcelData.zone,
+            plot_area: parcelData.plot_area,
+            existing_gfa: parcelData.existing_gfa,
+            allowed_gfa: parcelData.allowed_gfa,
+            gap: parcelData.gap,
+            warning: parcelData.warning,
+            address: parcelData.address,
+            district: parcelData.district,
+            existing_footprint: parcelData.existing_footprint,
+            building_count: parcelData.building_count,
           });
-          
-          if (!scoutRes.ok) {
-            setActiveParcel({
-              parcel_id: parcelId,
-              zone: "N/A",
-              plot_area: 0,
-              existing_gfa: 0,
-              allowed_gfa: 0,
-              gap: 0,
-              warning: "Demo Mode. Live calculation requires the Azure backend."
-            });
-            return;
-          }
-
-          const scoutData = await scoutRes.json();
-          if (scoutData.error) {
-            throw new Error(scoutData.error);
-          }
-          
-          setActiveParcel(scoutData);
         } catch (err: any) {
           setErrorMsg(err.message || "An error occurred.");
         } finally {
@@ -216,7 +207,7 @@ export default function ParcelExplorer() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
           </form>
           <p className="text-xs text-slate-500 mt-4 leading-relaxed">
-            Click on any parcel on the map to instantly calculate its development potential using the local Python pipeline.
+            Click any parcel to load its official boundary and area, public building data, address, district, and estimated development potential.
           </p>
         </div>
 
@@ -224,7 +215,7 @@ export default function ParcelExplorer() {
           {loading && (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-4">
               <Loader2 className="w-8 h-8 animate-spin text-bpi-navy" />
-              <p className="text-sm font-medium">Running Python pipeline...</p>
+              <p className="text-sm font-medium">Analyzing parcel data...</p>
             </div>
           )}
 
@@ -240,6 +231,8 @@ export default function ParcelExplorer() {
               <div>
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Selected Parcel</h3>
                 <p className="text-sm font-semibold text-slate-800 break-all">{activeParcel.parcel_id}</p>
+                {activeParcel.address && <p className="mt-2 text-xs text-slate-600 leading-relaxed">{activeParcel.address}</p>}
+                {activeParcel.district && <p className="mt-1 text-xs font-semibold text-bpi-navy">{activeParcel.district}</p>}
               </div>
 
               {activeParcel.warning && (
@@ -255,24 +248,41 @@ export default function ParcelExplorer() {
                 </div>
                 <div className="bg-white border border-slate-200 rounded-lg p-3">
                   <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Plot Area</p>
-                  <p className="text-sm font-bold text-slate-800">{activeParcel.plot_area?.toLocaleString(undefined, {maximumFractionDigits:0})} <span className="text-[10px] text-slate-400 font-medium">sqm</span></p>
+                  <p className="text-sm font-bold text-slate-800">
+                    {activeParcel.plot_area === null ? "N/A" : activeParcel.plot_area.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                    {activeParcel.plot_area !== null && <span className="text-[10px] text-slate-400 font-medium"> sqm</span>}
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-3">
+                {activeParcel.existing_footprint !== undefined && (
+                  <div className="bg-white border border-slate-200 rounded-lg p-4 flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-500 uppercase">Building Footprint</span>
+                    <span className="text-sm font-bold text-slate-800">
+                      {activeParcel.existing_footprint === null ? "N/A" : `${activeParcel.existing_footprint.toLocaleString(undefined, { maximumFractionDigits: 0 })} sqm`}
+                      {activeParcel.building_count !== null && activeParcel.building_count !== undefined && <span className="block text-[10px] text-slate-400 text-right">{activeParcel.building_count} buildings</span>}
+                    </span>
+                  </div>
+                )}
                 <div className="bg-white border border-slate-200 rounded-lg p-4 flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-500 uppercase">Existing GFA</span>
-                  <span className="text-sm font-bold text-slate-800">{activeParcel.existing_gfa?.toLocaleString(undefined, {maximumFractionDigits:0})} sqm</span>
+                  <span className="text-sm font-bold text-slate-800">
+                    {activeParcel.existing_gfa === null ? "N/A" : `${activeParcel.existing_gfa.toLocaleString(undefined, { maximumFractionDigits: 0 })} sqm`}
+                  </span>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-lg p-4 flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-500 uppercase">Allowed GFA</span>
-                  <span className="text-sm font-bold text-slate-800">{activeParcel.allowed_gfa?.toLocaleString(undefined, {maximumFractionDigits:0})} sqm</span>
+                  <span className="text-sm font-bold text-slate-800">
+                    {activeParcel.allowed_gfa === null ? "N/A" : `${activeParcel.allowed_gfa.toLocaleString(undefined, { maximumFractionDigits: 0 })} sqm`}
+                  </span>
                 </div>
                 
-                <div className={`rounded-xl p-5 border ${activeParcel.gap > 0 ? 'bg-bpi-green/10 border-bpi-green/30' : 'bg-slate-100 border-slate-200'}`}>
-                  <p className={`text-[11px] uppercase font-bold mb-1 ${activeParcel.gap > 0 ? 'text-bpi-green-dark' : 'text-slate-500'}`}>Unused Potential Gap</p>
-                  <p className={`text-2xl font-extrabold ${activeParcel.gap > 0 ? 'text-bpi-green' : 'text-slate-800'}`}>
-                    {activeParcel.gap?.toLocaleString(undefined, {maximumFractionDigits:0})} <span className="text-sm font-medium opacity-60">sqm</span>
+                <div className={`rounded-xl p-5 border ${(activeParcel.gap ?? 0) > 0 ? 'bg-bpi-green/10 border-bpi-green/30' : 'bg-slate-100 border-slate-200'}`}>
+                  <p className={`text-[11px] uppercase font-bold mb-1 ${(activeParcel.gap ?? 0) > 0 ? 'text-bpi-green-dark' : 'text-slate-500'}`}>Unused Potential Gap</p>
+                  <p className={`text-2xl font-extrabold ${(activeParcel.gap ?? 0) > 0 ? 'text-bpi-green' : 'text-slate-800'}`}>
+                    {activeParcel.gap === null ? "N/A" : activeParcel.gap.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    {activeParcel.gap !== null && <span className="text-sm font-medium opacity-60"> sqm</span>}
                   </p>
                 </div>
               </div>
@@ -306,7 +316,16 @@ export default function ParcelExplorer() {
             version="1.1.1"
           />
           <MapUpdater />
-          {searchCoords && <Marker position={searchCoords} icon={customIcon} />}
+          {selectedBoundary && (
+            <ParcelBoundary
+              key={JSON.stringify(selectedBoundary.coordinates[0][0])}
+              data={selectedBoundary}
+              style={{ color: '#1f6b4f', weight: 3, fillColor: '#53a318', fillOpacity: 0.2 }}
+            />
+          )}
+          {(selectedCoords || searchCoords) && (
+            <Marker position={selectedCoords || searchCoords!} icon={customIcon} />
+          )}
           <MapClickHandler />
         </MapContainer>
       </div>
