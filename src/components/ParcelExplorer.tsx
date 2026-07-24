@@ -48,10 +48,10 @@ function findMatchingParcel(lat: number, lng: number, addressSearch: string = ""
 type ScoutResult = {
   parcel_id: string;
   zone: string;
-  plot_area: number;
-  existing_gfa: number;
-  allowed_gfa: number;
-  gap: number;
+  plot_area: number | null;
+  existing_gfa: number | null;
+  allowed_gfa: number | null;
+  gap: number | null;
   warning: string | null;
   error?: string;
 };
@@ -169,12 +169,12 @@ export default function ParcelExplorer() {
           if (!scoutRes.ok) {
             setActiveParcel({
               parcel_id: parcelId,
-              zone: "N/A",
-              plot_area: 0,
-              existing_gfa: 0,
-              allowed_gfa: 0,
-              gap: 0,
-              warning: "Demo Mode. Live calculation requires the Azure backend."
+              zone: "Unavailable",
+              plot_area: parcelData.plot_area,
+              existing_gfa: null,
+              allowed_gfa: null,
+              gap: null,
+              warning: "Parcel area is calculated from the official cadastral geometry. Planning and building metrics are not available for this parcel yet."
             });
             return;
           }
@@ -252,24 +252,32 @@ export default function ParcelExplorer() {
                 </div>
                 <div className="bg-white border border-slate-200 rounded-lg p-3">
                   <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Plot Area</p>
-                  <p className="text-sm font-bold text-slate-800">{activeParcel.plot_area?.toLocaleString(undefined, {maximumFractionDigits:0})} <span className="text-[10px] text-slate-400 font-medium">sqm</span></p>
+                  <p className="text-sm font-bold text-slate-800">
+                    {activeParcel.plot_area === null ? "N/A" : activeParcel.plot_area.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                    {activeParcel.plot_area !== null && <span className="text-[10px] text-slate-400 font-medium"> sqm</span>}
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div className="bg-white border border-slate-200 rounded-lg p-4 flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-500 uppercase">Existing GFA</span>
-                  <span className="text-sm font-bold text-slate-800">{activeParcel.existing_gfa?.toLocaleString(undefined, {maximumFractionDigits:0})} sqm</span>
+                  <span className="text-sm font-bold text-slate-800">
+                    {activeParcel.existing_gfa === null ? "N/A" : `${activeParcel.existing_gfa.toLocaleString(undefined, { maximumFractionDigits: 0 })} sqm`}
+                  </span>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-lg p-4 flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-500 uppercase">Allowed GFA</span>
-                  <span className="text-sm font-bold text-slate-800">{activeParcel.allowed_gfa?.toLocaleString(undefined, {maximumFractionDigits:0})} sqm</span>
+                  <span className="text-sm font-bold text-slate-800">
+                    {activeParcel.allowed_gfa === null ? "N/A" : `${activeParcel.allowed_gfa.toLocaleString(undefined, { maximumFractionDigits: 0 })} sqm`}
+                  </span>
                 </div>
                 
-                <div className={`rounded-xl p-5 border ${activeParcel.gap > 0 ? 'bg-bpi-green/10 border-bpi-green/30' : 'bg-slate-100 border-slate-200'}`}>
-                  <p className={`text-[11px] uppercase font-bold mb-1 ${activeParcel.gap > 0 ? 'text-bpi-green-dark' : 'text-slate-500'}`}>Unused Potential Gap</p>
-                  <p className={`text-2xl font-extrabold ${activeParcel.gap > 0 ? 'text-bpi-green' : 'text-slate-800'}`}>
-                    {activeParcel.gap?.toLocaleString(undefined, {maximumFractionDigits:0})} <span className="text-sm font-medium opacity-60">sqm</span>
+                <div className={`rounded-xl p-5 border ${(activeParcel.gap ?? 0) > 0 ? 'bg-bpi-green/10 border-bpi-green/30' : 'bg-slate-100 border-slate-200'}`}>
+                  <p className={`text-[11px] uppercase font-bold mb-1 ${(activeParcel.gap ?? 0) > 0 ? 'text-bpi-green-dark' : 'text-slate-500'}`}>Unused Potential Gap</p>
+                  <p className={`text-2xl font-extrabold ${(activeParcel.gap ?? 0) > 0 ? 'text-bpi-green' : 'text-slate-800'}`}>
+                    {activeParcel.gap === null ? "N/A" : activeParcel.gap.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    {activeParcel.gap !== null && <span className="text-sm font-medium opacity-60"> sqm</span>}
                   </p>
                 </div>
               </div>
